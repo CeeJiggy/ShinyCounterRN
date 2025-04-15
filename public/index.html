@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Shiny Counter</title>
+    <script>
+        // Immediately set the initial background color
+        (function () {
+            try {
+                const savedPreferences = localStorage.getItem('themePreferences');
+                if (savedPreferences) {
+                    const { isSystem, theme } = JSON.parse(savedPreferences);
+                    if (theme === 'custom') {
+                        const customColors = localStorage.getItem('customColors');
+                        if (customColors) {
+                            const colors = JSON.parse(customColors);
+                            document.documentElement.style.backgroundColor = colors.background || '#ffffff';
+                            document.body.style.backgroundColor = colors.background || '#ffffff';
+                        }
+                    } else if (theme === 'dark' || (isSystem && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                        document.documentElement.style.backgroundColor = '#121212';
+                        document.body.style.backgroundColor = '#121212';
+                    }
+                }
+            } catch (error) {
+                console.error('Error setting initial theme:', error);
+            }
+        })();
+    </script>
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            transition: background-color 0.2s ease;
+        }
+
+        #root {
+            height: 100%;
+            display: flex;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+</body>
+</html>
