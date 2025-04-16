@@ -131,6 +131,7 @@ export default function Menu() {
             fontWeight: 'bold',
             color: menuColors.text,
             marginBottom: 10,
+            textAlign: 'center',
         },
         row: {
             flexDirection: 'row',
@@ -147,7 +148,9 @@ export default function Menu() {
         },
         label: {
             fontSize: 16,
+            marginBottom: 5,
             color: menuColors.text,
+            textAlign: 'center',
         },
         divider: {
             height: 1,
@@ -163,8 +166,31 @@ export default function Menu() {
             borderRadius: 5,
             padding: 10,
             fontSize: 16,
+            textAlign: 'center',
             color: menuColors.text,
             backgroundColor: menuColors.background,
+        },
+        oddsContainer: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 15,
+        },
+        oddsInput: {
+            borderWidth: 1,
+            borderColor: menuColors.text,
+            borderRadius: 5,
+            padding: 10,
+            fontSize: 16,
+            color: menuColors.text,
+            backgroundColor: menuColors.background,
+            width: '45%',
+            textAlign: 'center',
+        },
+        oddsSeparator: {
+            fontSize: 24,
+            color: menuColors.text,
+            marginHorizontal: 10,
         },
         buttonContainer: {
             flexDirection: 'row',
@@ -411,8 +437,56 @@ export default function Menu() {
                 <View style={styles.modalContainer}>
                     <View style={styles.modalContent}>
                         <ScrollView>
-                            <Text style={styles.modalTitle}>Settings</Text>
+                            {/* <Text style={styles.modalTitle}>Settings</Text> */}
 
+
+
+                            <View style={styles.section}>
+                                <Text style={styles.sectionTitle}>Counter Settings</Text>
+
+                                <View style={styles.inputContainer}>
+                                    <Text style={styles.label}>Counter Interval</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        value={tempInterval}
+                                        onChangeText={setTempInterval}
+                                        keyboardType="numeric"
+                                        placeholder="Enter interval"
+                                        placeholderTextColor={menuColors.text + '80'}
+                                    />
+                                </View>
+
+                                <View style={styles.inputContainer}>
+                                    <Text style={styles.label}>Odds</Text>
+                                    <View style={styles.oddsContainer}>
+                                        <TextInput
+                                            style={styles.oddsInput}
+                                            value={tempNumerator}
+                                            onChangeText={setTempNumerator}
+                                            keyboardType="numeric"
+                                            placeholder="Numerator"
+                                            placeholderTextColor={menuColors.text + '80'}
+                                        />
+                                        <Text style={styles.oddsSeparator}>/</Text>
+                                        <TextInput
+                                            style={styles.oddsInput}
+                                            value={tempDenominator}
+                                            onChangeText={setTempDenominator}
+                                            keyboardType="numeric"
+                                            placeholder="Denominator"
+                                            placeholderTextColor={menuColors.text + '80'}
+                                        />
+                                    </View>
+                                </View>
+
+                                <TouchableOpacity
+                                    style={styles.resetCounterButton}
+                                    onPress={handleResetPress}
+                                >
+                                    <Text style={styles.resetCounterButtonText}>Reset Counter</Text>
+                                </TouchableOpacity>
+
+                            </View>
                             <View style={styles.section}>
                                 <Text style={styles.sectionTitle}>Theme</Text>
                                 <View style={styles.row}>
@@ -510,53 +584,6 @@ export default function Menu() {
                                     </TouchableOpacity>
                                 </View>
                             )}
-
-                            <View style={styles.section}>
-                                <Text style={styles.sectionTitle}>Counter Settings</Text>
-
-                                <View style={styles.inputContainer}>
-                                    <Text style={styles.label}>Interval:</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        value={tempInterval}
-                                        onChangeText={setTempInterval}
-                                        keyboardType="numeric"
-                                        placeholder="Enter interval"
-                                        placeholderTextColor={menuColors.text + '80'}
-                                    />
-                                </View>
-
-                                <View style={styles.inputContainer}>
-                                    <Text style={styles.label}>Probability (numerator):</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        value={tempNumerator}
-                                        onChangeText={setTempNumerator}
-                                        keyboardType="numeric"
-                                        placeholder="Enter numerator"
-                                        placeholderTextColor={menuColors.text + '80'}
-                                    />
-                                </View>
-
-                                <View style={styles.inputContainer}>
-                                    <Text style={styles.label}>Probability (denominator):</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        value={tempDenominator}
-                                        onChangeText={setTempDenominator}
-                                        keyboardType="numeric"
-                                        placeholder="Enter denominator"
-                                        placeholderTextColor={menuColors.text + '80'}
-                                    />
-                                </View>
-                                <TouchableOpacity
-                                    style={styles.resetCounterButton}
-                                    onPress={handleResetPress}
-                                >
-                                    <Text style={styles.resetCounterButtonText}>Reset Counter</Text>
-                                </TouchableOpacity>
-
-                            </View>
                         </ScrollView>
 
                         <View style={styles.buttonContainer}>

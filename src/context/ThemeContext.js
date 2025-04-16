@@ -109,7 +109,7 @@ export function ThemeProvider({ children }) {
             primary: defaultButtonColor,
             secondary: defaultButtonColor,
             tertiary: defaultButtonColor,
-            background: isDark ? '#121212' : '#ffffff',
+            background: isDark ? '#242424' : '#ffffff',
             card: isDark ? '#1e1e1e' : '#f5f5f5',
             text: isDark ? '#ffffff' : '#000000',
             border: isDark ? '#333333' : '#e0e0e0',
