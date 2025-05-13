@@ -4,6 +4,7 @@ import { CounterProvider } from '../src/context/CounterContext';
 import CounterDisplay from '../src/components/CounterDisplay';
 import CounterControls from '../src/components/CounterControls';
 import Menu from '../src/components/Menu';
+import PokemonSelector from '../src/components/PokemonSelector';
 import { useCounter } from '../src/context/CounterContext';
 import { ThemeProvider, useThemeContext } from '../src/context/ThemeContext';
 import { ColorPaletteProvider, useColorPalette } from '../src/context/ColorPaletteContext';
@@ -33,6 +34,7 @@ function CounterApp() {
                     </View>
                 ) : (
                     <>
+                        <PokemonSelector />
                         <CounterDisplay />
                         <CounterControls />
                         <Menu />
