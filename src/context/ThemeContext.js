@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '../utils/asyncStorage';
-import { useColorPalette } from './ColorPaletteContext';
 
 const ThemeContext = createContext();
 
@@ -9,8 +8,6 @@ export function ThemeProvider({ children }) {
     const systemColorScheme = useColorScheme();
     const [theme, setTheme] = useState('light');
     const [isSystemTheme, setIsSystemTheme] = useState(true);
-    const { customColors, useSameButtonColor } = useColorPalette();
-    const [forceUpdate, setForceUpdate] = useState(0);
 
     // Load saved theme preferences
     useEffect(() => {
@@ -33,13 +30,6 @@ export function ThemeProvider({ children }) {
         };
         loadThemePreferences();
     }, [systemColorScheme]);
-
-    // Force update when custom colors change and we're using custom theme
-    useEffect(() => {
-        if (theme === 'custom') {
-            setForceUpdate(prev => prev + 1);
-        }
-    }, [customColors, useSameButtonColor, theme]);
 
     // Save theme preferences when they change
     useEffect(() => {
@@ -76,35 +66,12 @@ export function ThemeProvider({ children }) {
     const setThemeWithLogging = (newTheme) => {
         console.log('Setting theme to:', newTheme);
         setTheme(newTheme);
-        if (newTheme === 'custom') {
-            setIsSystemTheme(false); // Disable system theme when switching to custom
-            setForceUpdate(prev => prev + 1); // Force update when switching to custom theme
-        }
     };
 
     const getThemeColors = () => {
         const isDark = theme === 'dark' || (isSystemTheme && systemColorScheme === 'dark');
-
-        // If theme is custom, use custom colors
-        if (theme === 'custom') {
-            return {
-                primary: customColors.buttons,
-                secondary: customColors.buttons,
-                tertiary: customColors.buttons,
-                background: customColors.background,
-                card: customColors.background,
-                text: customColors.text,
-                border: customColors.text + '40',
-                notification: customColors.buttons,
-                incrementButton: useSameButtonColor ? customColors.buttons : customColors.incrementButton,
-                decrementButton: useSameButtonColor ? customColors.buttons : customColors.decrementButton,
-                resetButton: useSameButtonColor ? customColors.buttons : customColors.resetButton,
-                settingsButton: useSameButtonColor ? customColors.buttons : customColors.settingsButton,
-            };
-        }
-
-        // Otherwise use light/dark theme colors
         const defaultButtonColor = isDark ? '#2196F3' : '#2196F3';
+
         return {
             primary: defaultButtonColor,
             secondary: defaultButtonColor,
@@ -114,10 +81,10 @@ export function ThemeProvider({ children }) {
             text: isDark ? '#ffffff' : '#000000',
             border: isDark ? '#333333' : '#e0e0e0',
             notification: isDark ? '#ff4081' : '#f50057',
-            incrementButton: useSameButtonColor ? defaultButtonColor : (isDark ? '#4CAF50' : '#4CAF50'),
-            decrementButton: useSameButtonColor ? defaultButtonColor : (isDark ? '#f44336' : '#f44336'),
-            resetButton: useSameButtonColor ? defaultButtonColor : (isDark ? '#2196F3' : '#2196F3'),
-            settingsButton: useSameButtonColor ? defaultButtonColor : (isDark ? '#1565C0' : '#1565C0'),
+            incrementButton: isDark ? '#4CAF50' : '#4CAF50',
+            decrementButton: isDark ? '#f44336' : '#f44336',
+            resetButton: isDark ? '#2196F3' : '#2196F3',
+            settingsButton: isDark ? '#1565C0' : '#1565C0',
         };
     };
 
@@ -152,7 +119,6 @@ export function ThemeProvider({ children }) {
             toggleTheme,
             getThemeColors,
             getSystemThemeColors,
-            forceUpdate,
         }}>
             {children}
         </ThemeContext.Provider>

@@ -5337,7 +5337,7 @@
         "name": "meowstic",
         "url": "https://pokeapi.co/api/v2/pokemon/678/",
         "hasFemale": true,
-        "femaleOverride": "https://pokeapi.co/api/v2/pokemon/10025/",
+        "femaleOverride": "https://raw.githubusercontent.com/PokeAPI/sprites/refs/heads/master/sprites/pokemon/other/home/shiny/678-female.png"
     },
     {
         "name": "honedge",

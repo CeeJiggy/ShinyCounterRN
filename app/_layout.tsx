@@ -9,7 +9,6 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { CounterProvider } from '../src/context/CounterContext';
 import { ThemeProvider as CustomThemeProvider, useThemeContext } from '../src/context/ThemeContext';
-import { ColorPaletteProvider } from '../src/context/ColorPaletteContext';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -49,10 +48,8 @@ function AppContent() {
 
 export default function RootLayout() {
   return (
-    <ColorPaletteProvider>
-      <CustomThemeProvider>
-        <AppContent />
-      </CustomThemeProvider>
-    </ColorPaletteProvider>
+    <CustomThemeProvider>
+      <AppContent />
+    </CustomThemeProvider>
   );
 }

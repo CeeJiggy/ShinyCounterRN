@@ -7,13 +7,11 @@ import Menu from '../src/components/Menu';
 import PokemonSelector from '../src/components/PokemonSelector';
 import { useCounter } from '../src/context/CounterContext';
 import { ThemeProvider, useThemeContext } from '../src/context/ThemeContext';
-import { ColorPaletteProvider, useColorPalette } from '../src/context/ColorPaletteContext';
 
 // Set initial background color in index.html instead
 
 function CounterApp() {
     const { getThemeColors, theme } = useThemeContext();
-    const { customColors, useSameButtonColor } = useColorPalette();
     const themeColors = getThemeColors();
     const { isLoading } = useCounter();
 
@@ -23,7 +21,7 @@ function CounterApp() {
         if (typeof document !== 'undefined') {
             document.body.style.backgroundColor = themeColors.background;
         }
-    }, [theme, customColors, useSameButtonColor, themeColors.background]);
+    }, [theme, themeColors.background]);
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
@@ -47,13 +45,11 @@ function CounterApp() {
 
 export default function App() {
     return (
-        <ColorPaletteProvider>
-            <ThemeProvider>
-                <CounterProvider>
-                    <CounterApp />
-                </CounterProvider>
-            </ThemeProvider>
-        </ColorPaletteProvider>
+        <ThemeProvider>
+            <CounterProvider>
+                <CounterApp />
+            </CounterProvider>
+        </ThemeProvider>
     );
 }
 

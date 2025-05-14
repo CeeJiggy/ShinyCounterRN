@@ -76,6 +76,7 @@ export default function PokemonSelector() {
             color: themeColors.text,
             fontSize: 16,
             textTransform: 'capitalize',
+            marginBottom: 10,
         },
         expandButton: {
             padding: 5,
@@ -206,8 +207,9 @@ export default function PokemonSelector() {
                 return;
             }
             let details;
-            // Always fetch details from the pokemon's own url (form or not)
-            const response = await fetch(pokemon.url);
+            // If femaleOverride is present and we're selecting female, use that URL instead
+            const urlToFetch = (isFemale && pokemon.femaleOverride) ? pokemon.femaleOverride : pokemon.url;
+            const response = await fetch(urlToFetch);
             details = await response.json();
             const imageUrl = getHomeShinyImageUrl(details, pokemon, isFemale, false);
             let imageToUse = imageUrl;
@@ -409,6 +411,10 @@ export default function PokemonSelector() {
 
 function getHomeShinyImageUrl(details, pokemon, isFemale = false, forceMalePath = false) {
     const id = details.id;
+    // If this is a female override case, don't append /female to the URL
+    if (isFemale && pokemon.femaleOverride) {
+        return `${BASE_HOME_SHINY}/${id}.png`;
+    }
     if (isFemale) {
         return `${BASE_HOME_SHINY}/female/${id}.png`;
     }

@@ -3,8 +3,6 @@ import { StyleSheet, View, Text, TextInput, TouchableOpacity, Modal, Switch, Scr
 import { useTheme } from '@react-navigation/native';
 import { useCounter } from '../context/CounterContext';
 import { useThemeContext } from '../context/ThemeContext';
-import { useColorPalette } from '../context/ColorPaletteContext';
-import CustomColorPicker from './ColorPicker';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function Menu() {
@@ -24,24 +22,12 @@ export default function Menu() {
 
     const { colors, dark } = useTheme();
     const { isSystemTheme, setIsSystemTheme, theme, setTheme, getThemeColors, getSystemThemeColors } = useThemeContext();
-    const {
-        resetColors,
-        useSameButtonColor,
-        setUseSameButtonColor,
-        revertToInitialColors,
-        setInitialState
-    } = useColorPalette();
 
-    // Get theme colors for the menu UI (always using system/light/dark)
+    // Get theme colors for the menu UI
     const getMenuColors = () => {
         if (isSystemTheme) {
             return getSystemThemeColors();
         }
-        // For custom theme, use the system theme colors
-        if (theme === 'custom') {
-            return getSystemThemeColors();
-        }
-        // For light/dark themes, use their respective colors
         return getThemeColors();
     };
 
@@ -138,13 +124,6 @@ export default function Menu() {
             alignItems: 'center',
             justifyContent: 'space-between',
             marginBottom: 10,
-        },
-        toggleRow: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginVertical: 15,
-            gap: 15,
         },
         label: {
             fontSize: 16,
@@ -323,25 +302,6 @@ export default function Menu() {
             fontSize: 16,
             fontWeight: 'bold',
         },
-        colorGrid: {
-            flexDirection: 'row',
-            marginTop: 10,
-            gap: 15,
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-        },
-        colorGridItem: {
-            flex: 1,
-            minWidth: 100,
-            maxWidth: 150,
-        },
-        colorGridCentered: {
-            marginTop: 10,
-            alignItems: 'center',
-        },
-        colorGridItemCentered: {
-            width: 150,
-        },
     });
 
     const openMenu = () => {
@@ -363,9 +323,6 @@ export default function Menu() {
         setTempNumerator(probabilityNumerator.toString());
         setTempDenominator(probabilityDenominator.toString());
 
-        // Store initial color state
-        setInitialState();
-
         setIsVisible(true);
     };
 
@@ -383,9 +340,6 @@ export default function Menu() {
             console.log('Reverting to initial theme:', initialTheme);
             setTheme(initialTheme);
         }
-
-        // Revert to initial colors
-        revertToInitialColors();
 
         setIsVisible(false);
     };
@@ -437,10 +391,6 @@ export default function Menu() {
                 <View style={styles.modalContainer}>
                     <View style={styles.modalContent}>
                         <ScrollView>
-                            {/* <Text style={styles.modalTitle}>Settings</Text> */}
-
-
-
                             <View style={styles.section}>
                                 <Text style={styles.sectionTitle}>Counter Settings</Text>
 
@@ -485,8 +435,8 @@ export default function Menu() {
                                 >
                                     <Text style={styles.resetCounterButtonText}>Reset Counter</Text>
                                 </TouchableOpacity>
-
                             </View>
+
                             <View style={styles.section}>
                                 <Text style={styles.sectionTitle}>Theme</Text>
                                 <View style={styles.row}>
@@ -521,69 +471,9 @@ export default function Menu() {
                                             </TouchableOpacity>
                                             <Text style={styles.radioLabel}>Dark</Text>
                                         </View>
-
-                                        <View style={styles.radioOption}>
-                                            <TouchableOpacity
-                                                style={styles.radioButton}
-                                                onPress={() => handleThemeChange('custom')}
-                                            >
-                                                {selectedTheme === 'custom' && <View style={styles.radioButtonSelected} />}
-                                            </TouchableOpacity>
-                                            <Text style={styles.radioLabel}>Custom</Text>
-                                        </View>
                                     </View>
                                 )}
                             </View>
-
-                            {!isSystemTheme && selectedTheme === 'custom' && (
-                                <View style={styles.section}>
-                                    <Text style={styles.sectionTitle}>Custom Colors</Text>
-
-                                    <View style={styles.colorGrid}>
-                                        <View style={styles.colorGridItem}>
-                                            <CustomColorPicker colorType="background" label="Background" />
-                                        </View>
-                                        <View style={styles.colorGridItem}>
-                                            <CustomColorPicker colorType="text" label="Text" />
-                                        </View>
-                                    </View>
-
-                                    <View style={styles.toggleRow}>
-                                        <Text style={styles.label}>Same color for all buttons</Text>
-                                        <Switch
-                                            value={useSameButtonColor}
-                                            onValueChange={setUseSameButtonColor}
-                                            trackColor={{ false: '#989799', true: menuColors.text + '40' }}
-                                            thumbColor={useSameButtonColor ? 'rgba(33,150,243,1.00)' : '#4a4a4a'}
-                                            activeThumbColor={useSameButtonColor ? 'rgba(33,150,243,1.00)' : '#4a4a4a'}
-                                        />
-                                    </View>
-
-                                    {useSameButtonColor ? (
-                                        <View style={styles.colorGridCentered}>
-                                            <View style={styles.colorGridItemCentered}>
-                                                <CustomColorPicker colorType="buttons" label="Buttons" />
-                                            </View>
-                                        </View>
-                                    ) : (
-                                        <View style={styles.colorGrid}>
-                                            <View style={styles.colorGridItem}>
-                                                <CustomColorPicker colorType="incrementButton" label="+" />
-                                            </View>
-                                            <View style={styles.colorGridItem}>
-                                                <CustomColorPicker colorType="decrementButton" label="-" />
-                                            </View>
-                                            <View style={styles.colorGridItem}>
-                                                <CustomColorPicker colorType="settingsButton" label="Settings" />
-                                            </View>
-                                        </View>
-                                    )}
-
-                                    <TouchableOpacity style={styles.resetButton} onPress={resetColors}>
-                                        <Text style={styles.resetButtonText}>Reset Colors</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            )}
                         </ScrollView>
 
                         <View style={styles.buttonContainer}>

@@ -11,14 +11,7 @@
                 const savedPreferences = localStorage.getItem('themePreferences');
                 if (savedPreferences) {
                     const { isSystem, theme } = JSON.parse(savedPreferences);
-                    if (theme === 'custom') {
-                        const customColors = localStorage.getItem('customColors');
-                        if (customColors) {
-                            const colors = JSON.parse(customColors);
-                            document.documentElement.style.backgroundColor = colors.background || '#ffffff';
-                            document.body.style.backgroundColor = colors.background || '#ffffff';
-                        }
-                    } else if (theme === 'dark' || (isSystem && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    if (theme === 'dark' || (isSystem && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                         document.documentElement.style.backgroundColor = '#242424';
                         document.body.style.backgroundColor = '#242424';
                     }
