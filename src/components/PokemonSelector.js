@@ -13,6 +13,7 @@ export default function PokemonSelector() {
     const [pokemonList, setPokemonList] = useState([]);
     const [selectedPokemon, setSelectedPokemon] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [expandedPokemon, setExpandedPokemon] = useState({});
     const { getThemeColors } = useThemeContext();
     const themeColors = getThemeColors();
 
@@ -65,8 +66,6 @@ export default function PokemonSelector() {
             padding: 10,
             borderBottomWidth: 1,
             borderBottomColor: themeColors.text + '20',
-            flexDirection: 'row',
-            alignItems: 'center',
         },
         pokemonItemContent: {
             flex: 1,
@@ -76,6 +75,32 @@ export default function PokemonSelector() {
         pokemonName: {
             color: themeColors.text,
             fontSize: 16,
+            textTransform: 'capitalize',
+        },
+        expandButton: {
+            padding: 5,
+            marginLeft: 8,
+        },
+        formList: {
+            marginLeft: 20,
+            marginTop: 5,
+        },
+        formItem: {
+            padding: 8,
+            borderLeftWidth: 1,
+            borderLeftColor: themeColors.text + '20',
+            marginLeft: 10,
+        },
+        tagContainer: {
+            backgroundColor: themeColors.text + '15',
+            paddingHorizontal: 8,
+            paddingVertical: 2,
+            borderRadius: 12,
+            marginLeft: 8,
+        },
+        tagText: {
+            color: themeColors.text + 'CC',
+            fontSize: 12,
             textTransform: 'capitalize',
         },
         genderIconContainer: {
@@ -117,8 +142,44 @@ export default function PokemonSelector() {
         );
     };
 
+    const ExpandIcon = ({ expanded }) => (
+        <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+            <Path
+                d={expanded ? "M7 10l5 5 5-5" : "M9 5l6 7-6 7"}
+                stroke={themeColors.text}
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </Svg>
+    );
+
     useEffect(() => {
-        setPokemonList(pokemonListData);
+        // Group Pokemon forms with their base Pokemon
+        const groupedPokemon = {};
+        pokemonListData.forEach(pokemon => {
+            if (pokemon.isForm && pokemon.basePokemon) {
+                if (!groupedPokemon[pokemon.basePokemon]) {
+                    // Try to find the base entry in the list
+                    const baseEntry = pokemonListData.find(p => p.name === pokemon.basePokemon) || {};
+                    groupedPokemon[pokemon.basePokemon] = {
+                        name: pokemon.basePokemon,
+                        url: baseEntry.url || '',
+                        hasFemale: baseEntry.hasFemale || false,
+                        forms: []
+                    };
+                }
+                groupedPokemon[pokemon.basePokemon].forms.push(pokemon);
+            } else if (!pokemon.isForm) {
+                if (!groupedPokemon[pokemon.name]) {
+                    groupedPokemon[pokemon.name] = { ...pokemon, forms: [] };
+                } else {
+                    // Merge any forms if already created by a form
+                    groupedPokemon[pokemon.name] = { ...pokemon, forms: groupedPokemon[pokemon.name].forms || [] };
+                }
+            }
+        });
+        setPokemonList(Object.values(groupedPokemon));
         loadSelectedPokemon();
     }, []);
 
@@ -145,18 +206,10 @@ export default function PokemonSelector() {
                 return;
             }
             let details;
-            let forceMalePath = false;
-            if (isFemale && pokemon.femaleOverride) {
-                // Fetch from the override URL for female
-                const response = await fetch(pokemon.femaleOverride);
-                details = await response.json();
-                forceMalePath = true;
-            } else {
-                // Fetch details for the selected pokemon or form
-                const response = await fetch(pokemon.url);
-                details = await response.json();
-            }
-            const imageUrl = getHomeShinyImageUrl(details, pokemon, isFemale, forceMalePath);
+            // Always fetch details from the pokemon's own url (form or not)
+            const response = await fetch(pokemon.url);
+            details = await response.json();
+            const imageUrl = getHomeShinyImageUrl(details, pokemon, isFemale, false);
             let imageToUse = imageUrl;
             try {
                 const imageResponse = await fetch(imageUrl);
@@ -185,10 +238,16 @@ export default function PokemonSelector() {
         }
     };
 
-    // Only filter, do not duplicate entries for female
-    const filteredPokemon = pokemonList.filter(pokemon =>
-        pokemon.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const toggleExpand = (pokemonName) => {
+        setExpandedPokemon(prev => {
+            // If already open, close it. Otherwise, open only this one.
+            if (prev[pokemonName]) {
+                return {};
+            } else {
+                return { [pokemonName]: true };
+            }
+        });
+    };
 
     const getDisplayName = (pokemon) => {
         let name = pokemon.name;
@@ -196,34 +255,93 @@ export default function PokemonSelector() {
             name = name.replace(/-female$/, '');
         }
         if (pokemon.isForm) {
-            name = `${pokemon.basePokemon} (${name.split('-').pop()})`;
+            // Show the full form name (e.g., 'Gigantamax Venusaur')
+            return name.replace(/-/g, ' ');
         }
         return name;
     };
 
-    const renderPokemonItem = ({ item }) => (
-        <TouchableOpacity
-            style={styles.pokemonItem}
-            onPress={() => handleSelectPokemon(item, false)}
-        >
-            <View style={styles.pokemonItemContent}>
-                <Text style={styles.pokemonName}>{getDisplayName(item)}</Text>
-                {item.isForm && (
-                    <Text style={styles.formLabel}> (Form)</Text>
+    // Filtered list for search
+    const filteredPokemon = pokemonList
+        .map(pokemon => {
+            // Check if base matches
+            const baseMatch = pokemon.name.toLowerCase().includes(searchQuery.toLowerCase());
+            // Check if any forms match
+            const matchingForms = (pokemon.forms || []).filter(form =>
+                form.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (form.tag && form.tag.toLowerCase().includes(searchQuery.toLowerCase()))
+            );
+            if (baseMatch) {
+                // Show all forms if base matches
+                return { ...pokemon };
+            } else if (matchingForms.length > 0) {
+                // Show only matching forms, and force expanded
+                return { ...pokemon, forms: matchingForms };
+            }
+            // No match
+            return null;
+        })
+        .filter(Boolean);
+
+    const renderPokemonItem = ({ item }) => {
+        const isExpanded = expandedPokemon[item.name];
+        const hasForms = item.forms && item.forms.length > 0;
+
+        return (
+            <View style={styles.pokemonItem}>
+                <View style={styles.pokemonItemContent}>
+                    <TouchableOpacity
+                        style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
+                        onPress={() => handleSelectPokemon(item, false)}
+                    >
+                        <Text style={styles.pokemonName}>{getDisplayName(item)}</Text>
+                    </TouchableOpacity>
+                    {item.hasFemale && (
+                        <View style={{ flexDirection: 'row' }}>
+                            <TouchableOpacity onPress={() => handleSelectPokemon(item, false)}>
+                                <GenderIcon type="male" />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => handleSelectPokemon(item, true)}>
+                                <GenderIcon type="female" />
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                    {/* Always reserve space for the expand arrow for alignment */}
+                    <View style={{ width: 32, alignItems: 'center', justifyContent: 'center' }}>
+                        {hasForms ? (
+                            <TouchableOpacity
+                                style={styles.expandButton}
+                                onPress={() => toggleExpand(item.name)}
+                            >
+                                <ExpandIcon expanded={isExpanded} />
+                            </TouchableOpacity>
+                        ) : (
+                            <View style={{ width: 20, height: 20, opacity: 0, pointerEvents: 'none' }}>
+                                <ExpandIcon expanded={false} />
+                            </View>
+                        )}
+                    </View>
+                </View>
+                {isExpanded && hasForms && (
+                    <View style={[styles.formList, { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }]}>
+                        {item.forms.map((form, index) => (
+                            <TouchableOpacity
+                                key={index}
+                                style={[styles.formItem, { padding: 0, borderLeftWidth: 0, marginLeft: 0, marginBottom: 8 }]}
+                                onPress={() => handleSelectPokemon(form, false)}
+                            >
+                                {form.tag && (
+                                    <View style={styles.tagContainer}>
+                                        <Text style={styles.tagText}>{form.tag}</Text>
+                                    </View>
+                                )}
+                            </TouchableOpacity>
+                        ))}
+                    </View>
                 )}
             </View>
-            {item.hasFemale && (
-                <View style={{ flexDirection: 'row' }}>
-                    <TouchableOpacity onPress={() => handleSelectPokemon(item, false)}>
-                        <GenderIcon type="male" />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => handleSelectPokemon(item, true)}>
-                        <GenderIcon type="female" />
-                    </TouchableOpacity>
-                </View>
-            )}
-        </TouchableOpacity>
-    );
+        );
+    };
 
     return (
         <View style={styles.container}>
@@ -241,10 +359,12 @@ export default function PokemonSelector() {
             )}
             <TouchableOpacity
                 style={styles.selectButton}
-                onPress={() => setIsVisible(true)}
+                onPress={() => {
+                    setIsVisible(true);
+                }}
             >
                 <Text style={styles.selectButtonText}>
-                    {selectedPokemon ? 'Change Pokemon' : 'Select Pokemon'}
+                    {selectedPokemon ? 'Change Pokémon' : 'Select Pokémon'}
                 </Text>
             </TouchableOpacity>
 
@@ -289,18 +409,8 @@ export default function PokemonSelector() {
 
 function getHomeShinyImageUrl(details, pokemon, isFemale = false, forceMalePath = false) {
     const id = details.id;
-    const isForm = pokemon.isForm;
-    let formName = '';
-    if (isForm) {
-        formName = pokemon.name.replace(`${pokemon.basePokemon}-`, '');
+    if (isFemale) {
+        return `${BASE_HOME_SHINY}/female/${id}.png`;
     }
-    if (isFemale && !forceMalePath) {
-        return isForm
-            ? `${BASE_HOME_SHINY}/female/${id}-${formName}.png`
-            : `${BASE_HOME_SHINY}/female/${id}.png`;
-    } else {
-        return isForm
-            ? `${BASE_HOME_SHINY}/${id}-${formName}.png`
-            : `${BASE_HOME_SHINY}/${id}.png`;
-    }
+    return `${BASE_HOME_SHINY}/${id}.png`;
 }
