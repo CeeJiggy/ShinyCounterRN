@@ -1,19 +1,41 @@
 import React, { useEffect } from 'react';
-import { StyleSheet, View, SafeAreaView, ActivityIndicator } from 'react-native';
-import { CounterProvider } from '../src/context/CounterContext';
+import { StyleSheet, View, SafeAreaView, ActivityIndicator, Image, Text } from 'react-native';
+import { CounterProvider, useCounter } from '../src/context/CounterContext';
 import CounterDisplay from '../src/components/CounterDisplay';
 import CounterControls from '../src/components/CounterControls';
 import Menu from '../src/components/Menu';
-import PokemonSelector from '../src/components/PokemonSelector';
-import { useCounter } from '../src/context/CounterContext';
 import { ThemeProvider, useThemeContext } from '../src/context/ThemeContext';
-
+import CounterTabs from '../src/components/CounterTabs';
+import HomeTabView from '../src/components/HomeTabView';
+import IndividualCounterTabView from '../src/components/IndividualCounterTabView';
 // Set initial background color in index.html instead
+
+function capitalizeName(name: string): string {
+    if (!name) return '';
+    let base = name.replace(/-female$/, '');
+    return base.replace(/\b\w/g, (c: string) => c.toUpperCase()).replace(/-/g, ' ');
+}
+
+function PokemonDisplay() {
+    const { pokemonImage, pokemonName, counters, selectedCounterIndex } = useCounter();
+    if (!counters || counters.length === 0 || selectedCounterIndex < 0 || selectedCounterIndex >= counters.length) {
+        return null;
+    }
+    if (!pokemonImage) return null;
+    return (
+        <View style={{ alignItems: 'center', marginBottom: 10 }}>
+            <Image source={{ uri: pokemonImage }} style={{ width: 200, height: 200, marginBottom: 10 }} resizeMode="contain" />
+            <Text style={{ fontSize: 18, fontWeight: '500', textAlign: 'center', textTransform: 'capitalize' }}>
+                {capitalizeName(pokemonName)}
+            </Text>
+        </View>
+    );
+}
 
 function CounterApp() {
     const { getThemeColors, theme } = useThemeContext();
     const themeColors = getThemeColors();
-    const { isLoading } = useCounter();
+    const { isLoading, selectedCounterIndex } = useCounter();
 
     // Force re-render when theme or custom colors change
     useEffect(() => {
@@ -25,20 +47,12 @@ function CounterApp() {
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
-            <View style={styles.content}>
-                {isLoading ? (
-                    <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="large" color={themeColors.text} />
-                    </View>
-                ) : (
-                    <>
-                        <PokemonSelector />
-                        <CounterDisplay />
-                        <CounterControls />
-                        <Menu />
-                    </>
-                )}
-            </View>
+            {selectedCounterIndex === -1 ? (
+                <HomeTabView />
+            ) : (
+                <IndividualCounterTabView />
+            )}
+            <CounterTabs />
         </SafeAreaView>
     );
 }
@@ -61,6 +75,20 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    centeredContent: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    counterCard: {
+        width: '100%',
+        maxWidth: 400,
+        alignItems: 'center',
+        // backgroundColor: '#fff',
+        borderRadius: 16,
+        padding: 24,
+        marginBottom: 24,
+        elevation: 2,
     },
     loadingContainer: {
         flex: 1,

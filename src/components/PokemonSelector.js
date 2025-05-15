@@ -1,19 +1,35 @@
 import { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Image, Modal, TextInput, FlatList, ActivityIndicator } from 'react-native';
 import { useThemeContext } from '../context/ThemeContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useCounter } from '../context/CounterContext';
 import pokemonListData from '../data/pokemonList.json';
 import Svg, { Path } from 'react-native-svg';
+import { Ionicons } from '@expo/vector-icons';
 
 const BASE_HOME_SHINY = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/shiny';
 
 export default function PokemonSelector() {
-    const [isVisible, setIsVisible] = useState(false);
+    const {
+        counters = [],
+        selectedCounterIndex = 0,
+        setPokemon,
+        showPokemonSelector,
+        setShowPokemonSelector,
+        setInterval,
+        setProbabilityNumerator,
+        setProbabilityDenominator,
+        setCounterName
+    } = useCounter();
+
     const [searchQuery, setSearchQuery] = useState('');
     const [pokemonList, setPokemonList] = useState([]);
-    const [selectedPokemon, setSelectedPokemon] = useState(null);
     const [loading, setLoading] = useState(false);
     const [expandedPokemon, setExpandedPokemon] = useState({});
+    const [selectedPokemon, setSelectedPokemon] = useState(null);
+    const [tempCounterName, setTempCounterName] = useState('');
+    const [tempInterval, setTempInterval] = useState('1');
+    const [tempNumerator, setTempNumerator] = useState('1');
+    const [tempDenominator, setTempDenominator] = useState('4096');
     const { getThemeColors } = useThemeContext();
     const themeColors = getThemeColors();
 
@@ -116,6 +132,85 @@ export default function PokemonSelector() {
             color: themeColors.text + '80',
             fontSize: 12,
             marginLeft: 5,
+        },
+        setupTitle: {
+            fontSize: 24,
+            fontWeight: 'bold',
+            color: themeColors.text,
+            marginBottom: 20,
+            textAlign: 'center',
+        },
+        setupInput: {
+            backgroundColor: themeColors.text + '10',
+            padding: 10,
+            borderRadius: 8,
+            marginBottom: 15,
+            color: themeColors.text,
+        },
+        setupLabel: {
+            color: themeColors.text,
+            fontSize: 16,
+            marginBottom: 5,
+        },
+        oddsContainer: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginBottom: 15,
+        },
+        oddsInput: {
+            flex: 1,
+            backgroundColor: themeColors.text + '10',
+            padding: 10,
+            borderRadius: 8,
+            color: themeColors.text,
+        },
+        oddsSeparator: {
+            color: themeColors.text,
+            fontSize: 20,
+            marginHorizontal: 10,
+        },
+        setupButtonContainer: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            marginTop: 20,
+        },
+        setupButton: {
+            flex: 1,
+            padding: 15,
+            borderRadius: 8,
+            marginHorizontal: 5,
+            alignItems: 'center',
+        },
+        setupButtonText: {
+            color: '#fff',
+            fontSize: 16,
+            fontWeight: 'bold',
+        },
+        cancelButton: {
+            backgroundColor: themeColors.text + '40',
+        },
+        confirmButton: {
+            backgroundColor: themeColors.primary,
+        },
+        backButton: {
+            position: 'absolute',
+            top: 10,
+            left: 10,
+            zIndex: 1,
+        },
+        selectedPokemonPreview: {
+            alignItems: 'center',
+            marginBottom: 20,
+        },
+        selectedPokemonImage: {
+            width: 100,
+            height: 100,
+            marginBottom: 10,
+        },
+        selectedPokemonName: {
+            fontSize: 18,
+            color: themeColors.text,
+            textTransform: 'capitalize',
         }
     });
 
@@ -181,31 +276,42 @@ export default function PokemonSelector() {
             }
         });
         setPokemonList(Object.values(groupedPokemon));
-        loadSelectedPokemon();
     }, []);
 
-    const loadSelectedPokemon = async () => {
-        try {
-            const name = await AsyncStorage.getItem('selected_pokemon_name');
-            const image = await AsyncStorage.getItem('selected_pokemon_image');
-            if (name && image) {
-                setSelectedPokemon({ name, image });
-            }
-        } catch (error) { }
+    const formatPokemonName = (name) => {
+        return name.replace(/-female$/, '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     };
 
     const handleSelectPokemon = async (pokemon, isFemale = false) => {
         setLoading(true);
         try {
+            const pokemonName = pokemon.name + (isFemale ? '-female' : '');
+            const isNewCounter = !counters[selectedCounterIndex]?.pokemonName;
+            const formattedNewName = formatPokemonName(pokemonName);
+
             // If imageOverride is present, use it directly and skip API fetching
             if (pokemon.imageOverride) {
-                await AsyncStorage.setItem('selected_pokemon_image', pokemon.imageOverride);
-                await AsyncStorage.setItem('selected_pokemon_name', pokemon.name + (isFemale ? '-female' : ''));
-                setSelectedPokemon({ name: pokemon.name + (isFemale ? '-female' : ''), image: pokemon.imageOverride, isForm: pokemon.isForm, basePokemon: pokemon.basePokemon, isFemale });
+                if (isNewCounter) {
+                    setSelectedPokemon({
+                        name: pokemonName,
+                        image: pokemon.imageOverride
+                    });
+                    // Pre-fill counter name
+                    setTempCounterName(formattedNewName);
+                } else {
+                    // For existing counter, update Pokemon and possibly the name
+                    setPokemon(pokemonName, pokemon.imageOverride);
+                    const currentCounter = counters[selectedCounterIndex];
+                    const currentPokemonName = formatPokemonName(currentCounter.pokemonName || '');
+                    if (currentCounter.customName === currentPokemonName) {
+                        setCounterName(selectedCounterIndex, formattedNewName);
+                    }
+                    setShowPokemonSelector(false);
+                }
                 setLoading(false);
-                setIsVisible(false);
                 return;
             }
+
             let details;
             // If femaleOverride is present and we're selecting female, use that URL instead
             const urlToFetch = (isFemale && pokemon.femaleOverride) ? pokemon.femaleOverride : pokemon.url;
@@ -213,31 +319,85 @@ export default function PokemonSelector() {
             details = await response.json();
             const imageUrl = getHomeShinyImageUrl(details, pokemon, isFemale, false);
             let imageToUse = imageUrl;
+
             try {
                 const imageResponse = await fetch(imageUrl);
                 const imageBlob = await imageResponse.blob();
                 const reader = new FileReader();
                 reader.readAsDataURL(imageBlob);
-                reader.onloadend = async () => {
+                reader.onloadend = () => {
                     const base64data = reader.result;
-                    await AsyncStorage.setItem('selected_pokemon_image', base64data);
-                    await AsyncStorage.setItem('selected_pokemon_name', pokemon.name + (isFemale ? '-female' : ''));
-                    setSelectedPokemon({ name: pokemon.name + (isFemale ? '-female' : ''), image: base64data, isForm: pokemon.isForm, basePokemon: pokemon.basePokemon, isFemale });
+                    if (isNewCounter) {
+                        setSelectedPokemon({
+                            name: pokemonName,
+                            image: base64data
+                        });
+                        // Pre-fill counter name
+                        setTempCounterName(formattedNewName);
+                    } else {
+                        // For existing counter, update Pokemon and possibly the name
+                        setPokemon(pokemonName, base64data);
+                        const currentCounter = counters[selectedCounterIndex];
+                        const currentPokemonName = formatPokemonName(currentCounter.pokemonName || '');
+                        if (currentCounter.customName === currentPokemonName) {
+                            setCounterName(selectedCounterIndex, formattedNewName);
+                        }
+                        setShowPokemonSelector(false);
+                    }
                     setLoading(false);
-                    setIsVisible(false);
                 };
                 return;
             } catch (error) {
                 imageToUse = imageUrl;
             }
-            await AsyncStorage.setItem('selected_pokemon_image', imageToUse);
-            await AsyncStorage.setItem('selected_pokemon_name', pokemon.name + (isFemale ? '-female' : ''));
-            setSelectedPokemon({ name: pokemon.name + (isFemale ? '-female' : ''), image: imageToUse, isForm: pokemon.isForm, basePokemon: pokemon.basePokemon, isFemale });
-            setIsVisible(false);
+
+            if (isNewCounter) {
+                setSelectedPokemon({
+                    name: pokemonName,
+                    image: imageToUse
+                });
+                // Pre-fill counter name
+                setTempCounterName(formattedNewName);
+            } else {
+                // For existing counter, update Pokemon and possibly the name
+                setPokemon(pokemonName, imageToUse);
+                const currentCounter = counters[selectedCounterIndex];
+                const currentPokemonName = formatPokemonName(currentCounter.pokemonName || '');
+                if (currentCounter.customName === currentPokemonName) {
+                    setCounterName(selectedCounterIndex, formattedNewName);
+                }
+                setShowPokemonSelector(false);
+            }
         } catch (error) {
             console.error('Error fetching Pokemon details:', error);
             setLoading(false);
         }
+    };
+
+    const handleSetupComplete = () => {
+        if (selectedPokemon) {
+            setPokemon(selectedPokemon.name, selectedPokemon.image);
+            setInterval(parseInt(tempInterval) || 1);
+            setProbabilityNumerator(parseInt(tempNumerator) || 1);
+            setProbabilityDenominator(parseInt(tempDenominator) || 4096);
+            if (tempCounterName.trim()) {
+                setCounterName(selectedCounterIndex, tempCounterName.trim());
+            }
+        }
+        setShowPokemonSelector(false);
+        setSelectedPokemon(null);
+        setTempCounterName('');
+        setTempInterval('1');
+        setTempNumerator('1');
+        setTempDenominator('4096');
+    };
+
+    const handleSetupCancel = () => {
+        setSelectedPokemon(null);
+        setTempCounterName('');
+        setTempInterval('1');
+        setTempNumerator('1');
+        setTempDenominator('4096');
     };
 
     const toggleExpand = (pokemonName) => {
@@ -345,67 +505,134 @@ export default function PokemonSelector() {
         );
     };
 
-    return (
-        <View style={styles.container}>
-            {selectedPokemon && (
-                <>
-                    <Image
-                        source={{ uri: selectedPokemon.image }}
-                        style={styles.pokemonImage}
-                        resizeMode="contain"
-                    />
-                    <Text style={styles.pokemonName}>
-                        {getDisplayName(selectedPokemon)}
-                    </Text>
-                </>
-            )}
+    const renderSetupContent = () => (
+        <>
             <TouchableOpacity
-                style={styles.selectButton}
-                onPress={() => {
-                    setIsVisible(true);
-                }}
+                style={styles.backButton}
+                onPress={handleSetupCancel}
             >
-                <Text style={styles.selectButtonText}>
-                    {selectedPokemon ? 'Change Pokémon' : 'Select Pokémon'}
-                </Text>
+                <Ionicons name="arrow-back" size={24} color={themeColors.text} />
             </TouchableOpacity>
 
-            <Modal
-                visible={isVisible}
-                animationType="slide"
-                transparent={true}
-                onRequestClose={() => setIsVisible(false)}
+            <View style={styles.selectedPokemonPreview}>
+                {selectedPokemon?.image && (
+                    <Image
+                        source={{ uri: selectedPokemon.image }}
+                        style={styles.selectedPokemonImage}
+                    />
+                )}
+                <Text style={styles.selectedPokemonName}>
+                    {selectedPokemon?.name?.replace(/-female$/, '').replace(/-/g, ' ')}
+                </Text>
+            </View>
+
+            <Text style={styles.setupTitle}>Configure Counter</Text>
+
+            <Text style={styles.setupLabel}>Counter Name</Text>
+            <TextInput
+                style={styles.setupInput}
+                value={tempCounterName}
+                onChangeText={setTempCounterName}
+                placeholder="Enter counter name"
+                placeholderTextColor={themeColors.text + '80'}
+                maxLength={32}
+            />
+
+            <Text style={styles.setupLabel}>Counter Interval</Text>
+            <TextInput
+                style={styles.setupInput}
+                value={tempInterval}
+                onChangeText={setTempInterval}
+                keyboardType="numeric"
+                placeholder="Enter interval"
+                placeholderTextColor={themeColors.text + '80'}
+            />
+
+            <Text style={styles.setupLabel}>Odds</Text>
+            <View style={styles.oddsContainer}>
+                <TextInput
+                    style={styles.oddsInput}
+                    value={tempNumerator}
+                    onChangeText={setTempNumerator}
+                    keyboardType="numeric"
+                    placeholder="Numerator"
+                    placeholderTextColor={themeColors.text + '80'}
+                />
+                <Text style={styles.oddsSeparator}>/</Text>
+                <TextInput
+                    style={styles.oddsInput}
+                    value={tempDenominator}
+                    onChangeText={setTempDenominator}
+                    keyboardType="numeric"
+                    placeholder="Denominator"
+                    placeholderTextColor={themeColors.text + '80'}
+                />
+            </View>
+
+            <View style={styles.setupButtonContainer}>
+                <TouchableOpacity
+                    style={[styles.setupButton, styles.cancelButton]}
+                    onPress={handleSetupCancel}
+                >
+                    <Text style={styles.setupButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.setupButton, styles.confirmButton]}
+                    onPress={handleSetupComplete}
+                >
+                    <Text style={styles.setupButtonText}>Confirm</Text>
+                </TouchableOpacity>
+            </View>
+        </>
+    );
+
+    const renderPokemonSelectorContent = () => (
+        <>
+            <TextInput
+                style={styles.searchInput}
+                placeholder="Search Pokemon..."
+                placeholderTextColor={themeColors.text + '80'}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+            />
+            {loading ? (
+                <ActivityIndicator size="large" color={themeColors.text} />
+            ) : (
+                <FlatList
+                    data={filteredPokemon}
+                    keyExtractor={(item) => item.name}
+                    renderItem={renderPokemonItem}
+                    style={{
+                        scrollbarColor: `${themeColors.primary} ${themeColors.background}`,
+                        scrollbarWidth: 'thin',
+                        paddingHorizontal: 10
+                    }}
+                />
+            )}
+        </>
+    );
+
+    return (
+        <Modal
+            visible={showPokemonSelector}
+            animationType="fade"
+            transparent={true}
+            onRequestClose={() => setShowPokemonSelector(false)}
+        >
+            <TouchableOpacity
+                style={styles.modalContainer}
+                activeOpacity={1}
+                onPress={() => setShowPokemonSelector(false)}
             >
                 <TouchableOpacity
-                    style={styles.modalContainer}
                     activeOpacity={1}
-                    onPress={() => setIsVisible(false)}
+                    onPress={(e) => e.stopPropagation()}
+                    style={styles.modalContent}
                 >
-                    <TouchableOpacity
-                        activeOpacity={1}
-                        onPress={(e) => e.stopPropagation()}
-                        style={styles.modalContent}
-                    >
-                        <TextInput
-                            style={styles.searchInput}
-                            placeholder="Search Pokemon..."
-                            placeholderTextColor={themeColors.text + '80'}
-                            value={searchQuery}
-                            onChangeText={setSearchQuery}
-                        />
-                        {loading ? (
-                            <ActivityIndicator size="large" color={themeColors.text} />
-                        ) : (
-                            <FlatList
-                                data={filteredPokemon}
-                                keyExtractor={(item) => item.name}
-                                renderItem={renderPokemonItem}
-                            />
-                        )}
-                    </TouchableOpacity>
+                    {selectedPokemon ? renderSetupContent() : renderPokemonSelectorContent()}
                 </TouchableOpacity>
-            </Modal>
-        </View>
+            </TouchableOpacity>
+        </Modal>
     );
 }
 

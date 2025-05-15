@@ -5,33 +5,41 @@ export const CounterContext = createContext();
 
 const MAX_VALUE = 999999;
 const STORAGE_KEYS = {
-    INTERVAL: 'shinyCounter_interval',
-    PROBABILITY_NUMERATOR: 'shinyCounter_probabilityNumerator',
-    PROBABILITY_DENOMINATOR: 'shinyCounter_probabilityDenominator',
-    COUNT: 'shinyCounter_count'
+    COUNTERS: 'shinyCounter_counters',
+    SELECTED_COUNTER: 'shinyCounter_selectedCounter',
+    HOME_COUNTERS: 'shinyCounter_homeCounters'
 };
 
 export const CounterProvider = ({ children }) => {
-    const [interval, setInterval] = useState(1);
-    const [probabilityNumerator, setProbabilityNumerator] = useState(1);
-    const [probabilityDenominator, setProbabilityDenominator] = useState(4096);
-    const [count, setCount] = useState(0);
+    const [counters, setCounters] = useState([]);
+    const [selectedCounterIndex, setSelectedCounterIndex] = useState(0);
+    const [homeCounters, setHomeCounters] = useState([]); // Array of counter IDs to show in home tab
     const [isInitialized, setIsInitialized] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [showPokemonSelector, setShowPokemonSelector] = useState(false);
 
     // Load saved values on mount
     useEffect(() => {
         const loadSavedValues = async () => {
             try {
-                const savedInterval = await AsyncStorage.getItem(STORAGE_KEYS.INTERVAL);
-                const savedNumerator = await AsyncStorage.getItem(STORAGE_KEYS.PROBABILITY_NUMERATOR);
-                const savedDenominator = await AsyncStorage.getItem(STORAGE_KEYS.PROBABILITY_DENOMINATOR);
-                const savedCount = await AsyncStorage.getItem(STORAGE_KEYS.COUNT);
+                const savedCounters = await AsyncStorage.getItem(STORAGE_KEYS.COUNTERS);
+                const savedSelectedCounter = await AsyncStorage.getItem(STORAGE_KEYS.SELECTED_COUNTER);
+                const savedHomeCounters = await AsyncStorage.getItem(STORAGE_KEYS.HOME_COUNTERS);
 
-                if (savedInterval) setInterval(Number(savedInterval));
-                if (savedNumerator) setProbabilityNumerator(Number(savedNumerator));
-                if (savedDenominator) setProbabilityDenominator(Number(savedDenominator));
-                if (savedCount) setCount(Number(savedCount));
+                if (savedCounters) {
+                    setCounters(JSON.parse(savedCounters));
+                } else {
+                    // Start with no counters
+                    setCounters([]);
+                }
+
+                if (savedSelectedCounter) {
+                    setSelectedCounterIndex(Number(savedSelectedCounter));
+                }
+
+                if (savedHomeCounters) {
+                    setHomeCounters(JSON.parse(savedHomeCounters));
+                }
 
                 setIsInitialized(true);
             } catch (error) {
@@ -51,20 +59,19 @@ export const CounterProvider = ({ children }) => {
 
         const saveValues = async () => {
             try {
-                await AsyncStorage.setItem(STORAGE_KEYS.INTERVAL, interval.toString());
-                await AsyncStorage.setItem(STORAGE_KEYS.PROBABILITY_NUMERATOR, probabilityNumerator.toString());
-                await AsyncStorage.setItem(STORAGE_KEYS.PROBABILITY_DENOMINATOR, probabilityDenominator.toString());
-                await AsyncStorage.setItem(STORAGE_KEYS.COUNT, count.toString());
+                await AsyncStorage.setItem(STORAGE_KEYS.COUNTERS, JSON.stringify(counters));
+                await AsyncStorage.setItem(STORAGE_KEYS.SELECTED_COUNTER, selectedCounterIndex.toString());
+                await AsyncStorage.setItem(STORAGE_KEYS.HOME_COUNTERS, JSON.stringify(homeCounters));
             } catch (error) {
                 console.error('Error saving values:', error);
             }
         };
 
         saveValues();
-    }, [interval, probabilityNumerator, probabilityDenominator, count, isInitialized]);
+    }, [counters, selectedCounterIndex, homeCounters, isInitialized]);
 
-    const calculateBinomialProbability = (trials) => {
-        const p = probabilityNumerator / probabilityDenominator;
+    const calculateBinomialProbability = (trials, numerator, denominator) => {
+        const p = numerator / denominator;
 
         // If p is 0, probability is always 0
         if (p === 0) return 0;
@@ -75,32 +82,21 @@ export const CounterProvider = ({ children }) => {
         const q = 1 - p;
 
         // For very large numbers of trials, we can use the normal approximation
-        // This is valid when n*p and n*q are both > 5
         if (trials * p > 5 && trials * q > 5) {
-            // Using normal approximation for large numbers
             const mean = trials * p;
             const stdDev = Math.sqrt(trials * p * q);
-
-            // The probability of at least one success is 1 minus the probability of zero successes
-            // For large numbers, this is extremely close to 1 (100%)
-            // We can use the error function (erf) to calculate this precisely
             const z = mean / (stdDev * Math.SQRT2);
             const probability = (1 + Math.erf(z)) / 2;
-
             return probability * 100;
         }
 
-        // For smaller numbers, use the logarithmic method
-        // This is more precise for small numbers and still works well for medium-sized numbers
         const probability = Math.exp(trials * Math.log(q));
         return (1 - probability) * 100;
     };
 
-    // Add Math.erf if it's not available (some platforms might not have it)
+    // Add Math.erf if it's not available
     if (!Math.erf) {
-        // Approximation of the error function
         Math.erf = function (x) {
-            // Constants for approximation
             const a1 = 0.254829592;
             const a2 = -0.284496736;
             const a3 = 1.421413741;
@@ -108,11 +104,9 @@ export const CounterProvider = ({ children }) => {
             const a5 = 1.061405429;
             const p = 0.3275911;
 
-            // Save the sign of x
             const sign = x < 0 ? -1 : 1;
             x = Math.abs(x);
 
-            // Formula 7.1.26 from Abramowitz and Stegun
             const t = 1.0 / (1.0 + p * x);
             const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
 
@@ -120,30 +114,143 @@ export const CounterProvider = ({ children }) => {
         };
     }
 
+    const getCurrentCounter = () => counters[selectedCounterIndex] || null;
+
+    const updateCounter = (index, updates) => {
+        setCounters(prev => prev.map((counter, i) =>
+            i === index ? { ...counter, ...updates } : counter
+        ));
+    };
+
+    const addCounter = () => {
+        const newCounter = {
+            id: Date.now(),
+            count: 0,
+            interval: 1,
+            probabilityNumerator: 1,
+            probabilityDenominator: 4096,
+            pokemonName: null,
+            pokemonImage: null
+        };
+        setCounters(prev => [...prev, newCounter]);
+        setSelectedCounterIndex(counters.length);
+    };
+
+    const removeCounter = (index) => {
+        setCounters(prev => prev.filter((_, i) => i !== index));
+        if (selectedCounterIndex >= index) {
+            setSelectedCounterIndex(Math.max(0, selectedCounterIndex - 1));
+        }
+    };
+
     const increment = () => {
-        setCount(prev => Math.min(prev + interval, MAX_VALUE));
+        const counter = getCurrentCounter();
+        if (counter) {
+            updateCounter(selectedCounterIndex, {
+                count: Math.min(counter.count + counter.interval, MAX_VALUE)
+            });
+        }
     };
 
     const decrement = () => {
-        setCount(prev => Math.max(prev - interval, 0));
+        const counter = getCurrentCounter();
+        if (counter) {
+            updateCounter(selectedCounterIndex, {
+                count: Math.max(counter.count - counter.interval, 0)
+            });
+        }
     };
 
     const reset = () => {
-        setCount(0);
+        updateCounter(selectedCounterIndex, { count: 0 });
     };
 
-    const setCountSafe = (newCount) => {
-        // Ensure the count stays within valid bounds and is a number
+    const setCount = (newCount, counterId = null) => {
         const validCount = Math.min(Math.max(0, isNaN(newCount) ? 0 : newCount), MAX_VALUE);
-        setCount(validCount);
+        setCounters(prev =>
+            prev.map((counter, i) =>
+                (counterId ? counter.id === counterId : i === selectedCounterIndex)
+                    ? { ...counter, count: validCount }
+                    : counter
+            )
+        );
     };
+
+    const setInterval = (newInterval) => {
+        updateCounter(selectedCounterIndex, { interval: newInterval });
+    };
+
+    const setProbabilityNumerator = (newNumerator) => {
+        updateCounter(selectedCounterIndex, { probabilityNumerator: newNumerator });
+    };
+
+    const setProbabilityDenominator = (newDenominator) => {
+        updateCounter(selectedCounterIndex, { probabilityDenominator: newDenominator });
+    };
+
+    const setPokemon = (name, image) => {
+        updateCounter(selectedCounterIndex, { pokemonName: name, pokemonImage: image });
+    };
+
+    const setCounterName = (index, name) => {
+        setCounters(prev => prev.map((counter, i) =>
+            i === index ? { ...counter, customName: name } : counter
+        ));
+    };
+
+    const addCounterToHome = (counterId) => {
+        if (!homeCounters.includes(counterId)) {
+            setHomeCounters(prev => [...prev, counterId]);
+        }
+    };
+
+    const removeCounterFromHome = (counterId) => {
+        setHomeCounters(prev => prev.filter(id => id !== counterId));
+    };
+
+    const getHomeCounters = () => {
+        return counters.filter(counter => homeCounters.includes(counter.id));
+    };
+
+    const incrementHomeCounters = () => {
+        setCounters(prev => prev.map(counter => {
+            if (homeCounters.includes(counter.id)) {
+                return {
+                    ...counter,
+                    count: Math.min(counter.count + counter.interval, MAX_VALUE)
+                };
+            }
+            return counter;
+        }));
+    };
+
+    const decrementHomeCounters = () => {
+        setCounters(prev => prev.map(counter => {
+            if (homeCounters.includes(counter.id)) {
+                return {
+                    ...counter,
+                    count: Math.max(counter.count - counter.interval, 0)
+                };
+            }
+            return counter;
+        }));
+    };
+
+    const currentCounter = getCurrentCounter();
 
     return (
         <CounterContext.Provider value={{
-            count,
-            interval,
-            probabilityNumerator,
-            probabilityDenominator,
+            counters,
+            selectedCounterIndex,
+            setSelectedCounterIndex,
+            addCounter,
+            removeCounter,
+            count: currentCounter?.count || 0,
+            interval: currentCounter?.interval || 1,
+            probabilityNumerator: currentCounter?.probabilityNumerator || 1,
+            probabilityDenominator: currentCounter?.probabilityDenominator || 4096,
+            pokemonName: currentCounter?.pokemonName,
+            pokemonImage: currentCounter?.pokemonImage,
             setInterval,
             setProbabilityNumerator,
             setProbabilityDenominator,
@@ -151,8 +258,18 @@ export const CounterProvider = ({ children }) => {
             decrement,
             reset,
             calculateBinomialProbability,
-            setCount: setCountSafe,
-            isLoading
+            setCount,
+            setPokemon,
+            isLoading,
+            showPokemonSelector,
+            setShowPokemonSelector,
+            setCounterName,
+            homeCounters,
+            addCounterToHome,
+            removeCounterFromHome,
+            getHomeCounters,
+            incrementHomeCounters,
+            decrementHomeCounters
         }}>
             {children}
         </CounterContext.Provider>

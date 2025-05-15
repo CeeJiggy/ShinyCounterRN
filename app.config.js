@@ -26,6 +26,13 @@ export default {
         web: {
             favicon: './assets/favicon.png',
             bundler: 'metro'
-        }
+        },
+
+        "plugins": [
+            "expo-font",
+            "expo-router",
+            "expo-web-browser"
+        ]
+
     }
 }; 

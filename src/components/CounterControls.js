@@ -5,10 +5,22 @@ import { useThemeContext } from '../context/ThemeContext';
 import { useEffect } from 'react';
 
 export default function CounterControls() {
-    const { increment, decrement } = useCounter();
+    const {
+        increment,
+        decrement,
+        counters = [],
+        selectedCounterIndex = 0,
+        incrementHomeCounters,
+        decrementHomeCounters
+    } = useCounter();
     const { colors } = useTheme();
     const { theme, getThemeColors } = useThemeContext();
     const themeColors = getThemeColors();
+
+    // Hide controls if no counters exist or none is selected
+    if (!counters || counters.length === 0 || selectedCounterIndex < -1 || selectedCounterIndex >= counters.length) {
+        return null;
+    }
 
     // Force re-render when theme changes
     useEffect(() => {
@@ -40,6 +52,26 @@ export default function CounterControls() {
             fontWeight: 'bold',
         },
     });
+
+    // If we're in the home tab, use the home counter controls
+    if (selectedCounterIndex === -1) {
+        return (
+            <View style={styles.container}>
+                <TouchableOpacity
+                    style={[styles.button, styles.decrementButton]}
+                    onPress={decrementHomeCounters}
+                >
+                    <Text style={styles.buttonText}>-</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.button, styles.incrementButton]}
+                    onPress={incrementHomeCounters}
+                >
+                    <Text style={styles.buttonText}>+</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
 
     return (
         <View style={styles.container}>

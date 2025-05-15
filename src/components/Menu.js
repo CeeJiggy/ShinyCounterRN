@@ -4,13 +4,14 @@ import { useTheme } from '@react-navigation/native';
 import { useCounter } from '../context/CounterContext';
 import { useThemeContext } from '../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import PokemonSelector from './PokemonSelector';
 
-export default function Menu() {
+export default function Menu({ showThemeOnly = false }) {
     const [isVisible, setIsVisible] = useState(false);
-    const [showResetConfirm, setShowResetConfirm] = useState(false);
     const [tempInterval, setTempInterval] = useState('');
     const [tempNumerator, setTempNumerator] = useState('');
     const [tempDenominator, setTempDenominator] = useState('');
+    const [tempCounterName, setTempCounterName] = useState('');
     const [selectedTheme, setSelectedTheme] = useState('light');
     const [initialSettings, setInitialSettings] = useState({
         theme: 'light',
@@ -19,9 +20,29 @@ export default function Menu() {
         denominator: ''
     });
     const [initialTheme, setInitialTheme] = useState('light');
+    const [showNoCountersMsg, setShowNoCountersMsg] = useState(false);
+    const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
     const { colors, dark } = useTheme();
     const { isSystemTheme, setIsSystemTheme, theme, setTheme, getThemeColors, getSystemThemeColors } = useThemeContext();
+
+    // Use showPokemonSelector from context
+    const {
+        counters = [],
+        selectedCounterIndex = 0,
+        setSelectedCounterIndex,
+        interval,
+        probabilityNumerator,
+        probabilityDenominator,
+        setInterval,
+        setProbabilityNumerator,
+        setProbabilityDenominator,
+        reset,
+        removeCounter,
+        showPokemonSelector,
+        setShowPokemonSelector,
+        setCounterName
+    } = useCounter();
 
     // Get theme colors for the menu UI
     const getMenuColors = () => {
@@ -34,27 +55,122 @@ export default function Menu() {
     const menuColors = getMenuColors();
     const themeColors = getThemeColors();
 
-    const {
-        interval,
-        probabilityNumerator,
-        probabilityDenominator,
-        setInterval,
-        setProbabilityNumerator,
-        setProbabilityDenominator,
-        reset
-    } = useCounter();
-
     // Force re-render when theme changes
     useEffect(() => {
         // This empty effect will cause the component to re-render when theme changes
     }, [theme]);
 
-    // Update selected theme when theme changes
     useEffect(() => {
-        if (!isSystemTheme) {
-            setSelectedTheme(theme);
+        setShowNoCountersMsg(counters.length === 0);
+        if (counters && counters[selectedCounterIndex]) {
+            setTempCounterName(counters[selectedCounterIndex].customName || '');
         }
-    }, [theme, isSystemTheme]);
+    }, [counters, selectedCounterIndex]);
+
+    // Pre-populate name field with Pokémon name if empty and a Pokémon is selected
+    useEffect(() => {
+        if (
+            counters &&
+            counters[selectedCounterIndex] &&
+            (!counters[selectedCounterIndex].customName || counters[selectedCounterIndex].customName.trim() === '') &&
+            counters[selectedCounterIndex].pokemonName
+        ) {
+            const pokeName = counters[selectedCounterIndex].pokemonName;
+            const capName = pokeName.replace(/-female$/, '').replace(/\b\w/g, c => c.toUpperCase()).replace(/-/g, ' ');
+            setTempCounterName(capName);
+        }
+    }, [counters && counters[selectedCounterIndex]?.pokemonName]);
+
+    const handleOpenMenu = () => {
+        // Store initial settings when opening the modal
+        setInitialSettings({
+            theme: theme,
+            interval: interval?.toString() || '',
+            numerator: probabilityNumerator?.toString() || '',
+            denominator: probabilityDenominator?.toString() || ''
+        });
+
+        // Set the initial theme to the current theme ONLY when opening
+        setInitialTheme(theme);
+        setSelectedTheme(theme);
+
+        setTempInterval(interval?.toString() || '');
+        setTempNumerator(probabilityNumerator?.toString() || '');
+        setTempDenominator(probabilityDenominator?.toString() || '');
+
+        setIsVisible(true);
+    };
+
+    const handleCancel = () => {
+        // Restore initial settings when canceling
+        setSelectedTheme(initialSettings.theme);
+        setTempInterval(initialSettings.interval);
+        setTempNumerator(initialSettings.numerator);
+        setTempDenominator(initialSettings.denominator);
+
+        // Revert to the initial theme immediately
+        if (!isSystemTheme) {
+            setTheme(initialTheme);
+        }
+
+        setIsVisible(false);
+    };
+
+    const saveSettings = () => {
+        const newInterval = parseInt(tempInterval) || 1;
+        const newNumerator = parseInt(tempNumerator) || 1;
+        const newDenominator = parseInt(tempDenominator) || 4096;
+
+        setInterval(newInterval);
+        setProbabilityNumerator(newNumerator);
+        setProbabilityDenominator(newDenominator);
+        if (setCounterName && counters[selectedCounterIndex]) {
+            if (tempCounterName.trim() !== '') {
+                setCounterName(selectedCounterIndex, tempCounterName.trim());
+            } else {
+                // Fallback to Pokémon name or default
+                const pokeName = counters[selectedCounterIndex].pokemonName;
+                if (pokeName) {
+                    // Capitalize like in CounterTabs
+                    const capName = pokeName.replace(/-female$/, '').replace(/\b\w/g, c => c.toUpperCase()).replace(/-/g, ' ');
+                    setCounterName(selectedCounterIndex, capName);
+                } else {
+                    setCounterName(selectedCounterIndex, `Counter ${selectedCounterIndex + 1}`);
+                }
+            }
+        }
+
+        // Theme changes are already applied, just close the modal
+        setIsVisible(false);
+    };
+
+    const handleThemeChange = (newTheme) => {
+        setSelectedTheme(newTheme);
+        if (!isSystemTheme) {
+            setTheme(newTheme);
+        }
+    };
+
+    const handleDeleteCounter = () => {
+        setShowDeleteConfirmation(true);
+    };
+
+    const confirmDeleteCounter = () => {
+        if (counters.length > 1) {
+            removeCounter(selectedCounterIndex);
+            setSelectedCounterIndex(0);
+            setIsVisible(false);
+        } else if (counters.length === 1) {
+            removeCounter(selectedCounterIndex);
+            setShowNoCountersMsg(true);
+            setIsVisible(false);
+        }
+        setShowDeleteConfirmation(false);
+    };
+
+    const cancelDeleteCounter = () => {
+        setShowDeleteConfirmation(false);
+    };
 
     const styles = StyleSheet.create({
         menuButton: {
@@ -193,7 +309,14 @@ export default function Menu() {
         saveButton: {
             backgroundColor: menuColors.incrementButton,
         },
-        buttonText: {
+        deleteButton: {
+            backgroundColor: 'red',
+            marginTop: 10,
+            padding: 10,
+            borderRadius: 5,
+            alignItems: 'center',
+        },
+        deleteButtonText: {
             color: '#fff',
             fontSize: 16,
             fontWeight: 'bold',
@@ -240,34 +363,47 @@ export default function Menu() {
             fontSize: 16,
             color: menuColors.text,
         },
-        resetCounterButton: {
-            backgroundColor: menuColors.resetButton,
-            padding: 10,
-            borderRadius: 5,
-            alignItems: 'center',
-            marginTop: 15,
-            marginBottom: 5,
+        noCountersMsg: {
+            color: menuColors.text,
+            fontSize: 16,
+            fontWeight: 'bold',
+            textAlign: 'center',
+            marginVertical: 20,
         },
-        resetCounterButtonText: {
+        warningContainer: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 10,
+        },
+        addButton: {
+            width: 25,
+            height: 25,
+            borderRadius: 20,
+            backgroundColor: themeColors.primary,
+            alignItems: 'center',
+            justifyContent: 'center',
+        },
+        selectButton: {
+            backgroundColor: themeColors.primary,
+            padding: 10,
+            borderRadius: 8,
+            marginBottom: 10,
+        },
+        selectButtonText: {
             color: '#fff',
             fontSize: 16,
             fontWeight: 'bold',
         },
         confirmationModal: {
-            backgroundColor: 'rgba(0, 0, 0, 0.9)',
-            flex: 1,
-            justifyContent: 'center',
-            alignItems: 'center',
-        },
-        confirmationContent: {
             backgroundColor: menuColors.background,
             padding: 20,
             borderRadius: 10,
             width: '80%',
-            maxWidth: 300,
+            maxWidth: 400,
         },
         confirmationTitle: {
-            fontSize: 18,
+            fontSize: 20,
             fontWeight: 'bold',
             color: menuColors.text,
             marginBottom: 15,
@@ -281,162 +417,132 @@ export default function Menu() {
         },
         confirmationButtons: {
             flexDirection: 'row',
-            justifyContent: 'space-around',
+            justifyContent: 'space-between',
+            gap: 10,
         },
-        confirmButton: {
+        confirmationButton: {
+            flex: 1,
+            padding: 10,
+            borderRadius: 5,
+            alignItems: 'center',
+        },
+        cancelDeleteButton: {
             backgroundColor: menuColors.decrementButton,
-            padding: 10,
-            borderRadius: 5,
-            minWidth: 100,
-            alignItems: 'center',
         },
-        cancelConfirmButton: {
-            backgroundColor: menuColors.incrementButton,
-            padding: 10,
-            borderRadius: 5,
-            minWidth: 100,
-            alignItems: 'center',
+        confirmDeleteButton: {
+            backgroundColor: 'red',
         },
-        confirmButtonText: {
+        confirmationButtonText: {
             color: '#fff',
             fontSize: 16,
             fontWeight: 'bold',
         },
     });
 
-    const openMenu = () => {
-        console.log('Opening menu with theme:', theme);
-
-        // Store initial settings when opening the modal
-        setInitialSettings({
-            theme: theme,
-            interval: interval.toString(),
-            numerator: probabilityNumerator.toString(),
-            denominator: probabilityDenominator.toString()
-        });
-
-        // Set the initial theme to the current theme ONLY when opening
-        setInitialTheme(theme);
-        setSelectedTheme(theme);
-
-        setTempInterval(interval.toString());
-        setTempNumerator(probabilityNumerator.toString());
-        setTempDenominator(probabilityDenominator.toString());
-
-        setIsVisible(true);
-    };
-
-    const handleCancel = () => {
-        console.log('Canceling with initialTheme:', initialTheme);
-
-        // Restore initial settings when canceling
-        setSelectedTheme(initialSettings.theme);
-        setTempInterval(initialSettings.interval);
-        setTempNumerator(initialSettings.numerator);
-        setTempDenominator(initialSettings.denominator);
-
-        // Revert to the initial theme immediately
-        if (!isSystemTheme) {
-            console.log('Reverting to initial theme:', initialTheme);
-            setTheme(initialTheme);
-        }
-
-        setIsVisible(false);
-    };
-
-    const saveSettings = () => {
-        const newInterval = parseInt(tempInterval) || 1;
-        const newNumerator = parseInt(tempNumerator) || 1;
-        const newDenominator = parseInt(tempDenominator) || 4096;
-
-        setInterval(newInterval);
-        setProbabilityNumerator(newNumerator);
-        setProbabilityDenominator(newDenominator);
-
-        // Theme changes are already applied, just close the modal
-        setIsVisible(false);
-    };
-
-    const handleThemeChange = (newTheme) => {
-        console.log('Changing theme to:', newTheme);
-        setSelectedTheme(newTheme);
-
-        // Immediately apply the theme change
-        if (!isSystemTheme) {
-            setTheme(newTheme);
-        }
-    };
-
-    const handleResetPress = () => {
-        setShowResetConfirm(true);
-    };
-
-    const handleConfirmReset = () => {
-        reset();
-        setShowResetConfirm(false);
-    };
-
     return (
         <>
-            <TouchableOpacity style={styles.menuButton} onPress={openMenu}>
+            <TouchableOpacity style={styles.menuButton} onPress={handleOpenMenu}>
                 <Ionicons name="settings-outline" size={24} color="#fff" />
             </TouchableOpacity>
 
+            {/* Only render the modal for selecting/changing Pokemon here */}
+            <PokemonSelector />
+
             <Modal
                 visible={isVisible}
-                animationType="slide"
+                animationType="fade"
                 transparent={true}
                 onRequestClose={handleCancel}
             >
                 <View style={styles.modalContainer}>
                     <View style={styles.modalContent}>
                         <ScrollView>
-                            <View style={styles.section}>
-                                <Text style={styles.sectionTitle}>Counter Settings</Text>
+                            {!showThemeOnly && (
+                                <View style={styles.section}>
+                                    <Text style={styles.sectionTitle}>Counter Settings</Text>
+                                    {showNoCountersMsg || counters.length === 0 ? (
+                                        <View style={styles.warningContainer}>
+                                            <Text style={styles.noCountersMsg}>
+                                                Click
+                                            </Text>
+                                            <View style={styles.addButton}>
+                                                <Ionicons name="add" size={16} color="#fff" />
+                                            </View>
+                                            <Text style={styles.noCountersMsg}>
+                                                to add a new counter.
+                                            </Text>
+                                        </View>
+                                    ) : (
+                                        <>
+                                            <View style={styles.inputContainer}>
+                                                <Text style={styles.label}>Counter Name</Text>
+                                                <TextInput
+                                                    style={styles.input}
+                                                    value={tempCounterName}
+                                                    onChangeText={setTempCounterName}
+                                                    placeholder="Enter counter name"
+                                                    placeholderTextColor={menuColors.text + '80'}
+                                                    maxLength={32}
+                                                />
+                                            </View>
+                                            <View style={{ alignItems: 'center', marginBottom: 20 }}>
+                                                <TouchableOpacity
+                                                    style={styles.selectButton}
+                                                    onPress={() => {
+                                                        setIsVisible(false);
+                                                        setTimeout(() => setShowPokemonSelector(true), 300);
+                                                    }}
+                                                >
+                                                    <Text style={styles.selectButtonText}>
+                                                        {counters[selectedCounterIndex]?.pokemonImage ? 'Change Pokémon' : 'Select Pokémon'}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                            <View style={styles.inputContainer}>
+                                                <Text style={styles.label}>Counter Interval</Text>
+                                                <TextInput
+                                                    style={styles.input}
+                                                    value={tempInterval}
+                                                    onChangeText={setTempInterval}
+                                                    keyboardType="numeric"
+                                                    placeholder="Enter interval"
+                                                    placeholderTextColor={menuColors.text + '80'}
+                                                />
+                                            </View>
 
-                                <View style={styles.inputContainer}>
-                                    <Text style={styles.label}>Counter Interval</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        value={tempInterval}
-                                        onChangeText={setTempInterval}
-                                        keyboardType="numeric"
-                                        placeholder="Enter interval"
-                                        placeholderTextColor={menuColors.text + '80'}
-                                    />
+                                            <View style={styles.inputContainer}>
+                                                <Text style={styles.label}>Odds</Text>
+                                                <View style={styles.oddsContainer}>
+                                                    <TextInput
+                                                        style={styles.oddsInput}
+                                                        value={tempNumerator}
+                                                        onChangeText={setTempNumerator}
+                                                        keyboardType="numeric"
+                                                        placeholder="Numerator"
+                                                        placeholderTextColor={menuColors.text + '80'}
+                                                    />
+                                                    <Text style={styles.oddsSeparator}>/</Text>
+                                                    <TextInput
+                                                        style={styles.oddsInput}
+                                                        value={tempDenominator}
+                                                        onChangeText={setTempDenominator}
+                                                        keyboardType="numeric"
+                                                        placeholder="Denominator"
+                                                        placeholderTextColor={menuColors.text + '80'}
+                                                    />
+                                                </View>
+                                            </View>
+
+                                            <TouchableOpacity
+                                                style={styles.deleteButton}
+                                                onPress={handleDeleteCounter}
+                                            >
+                                                <Text style={styles.deleteButtonText}>Delete Counter</Text>
+                                            </TouchableOpacity>
+                                        </>
+                                    )}
                                 </View>
-
-                                <View style={styles.inputContainer}>
-                                    <Text style={styles.label}>Odds</Text>
-                                    <View style={styles.oddsContainer}>
-                                        <TextInput
-                                            style={styles.oddsInput}
-                                            value={tempNumerator}
-                                            onChangeText={setTempNumerator}
-                                            keyboardType="numeric"
-                                            placeholder="Numerator"
-                                            placeholderTextColor={menuColors.text + '80'}
-                                        />
-                                        <Text style={styles.oddsSeparator}>/</Text>
-                                        <TextInput
-                                            style={styles.oddsInput}
-                                            value={tempDenominator}
-                                            onChangeText={setTempDenominator}
-                                            keyboardType="numeric"
-                                            placeholder="Denominator"
-                                            placeholderTextColor={menuColors.text + '80'}
-                                        />
-                                    </View>
-                                </View>
-
-                                <TouchableOpacity
-                                    style={styles.resetCounterButton}
-                                    onPress={handleResetPress}
-                                >
-                                    <Text style={styles.resetCounterButtonText}>Reset Counter</Text>
-                                </TouchableOpacity>
-                            </View>
-
+                            )}
                             <View style={styles.section}>
                                 <Text style={styles.sectionTitle}>Theme</Text>
                                 <View style={styles.row}>
@@ -483,10 +589,10 @@ export default function Menu() {
                             >
                                 <Text style={styles.buttonText}>Cancel</Text>
                             </TouchableOpacity>
-
                             <TouchableOpacity
                                 style={[styles.button, styles.saveButton]}
                                 onPress={saveSettings}
+                                disabled={showNoCountersMsg || counters.length === 0}
                             >
                                 <Text style={styles.buttonText}>Save</Text>
                             </TouchableOpacity>
@@ -495,35 +601,38 @@ export default function Menu() {
                 </View>
             </Modal>
 
-            <Modal
-                visible={showResetConfirm}
-                transparent={true}
-                animationType="fade"
-                onRequestClose={() => setShowResetConfirm(false)}
-            >
-                <View style={styles.confirmationModal}>
-                    <View style={styles.confirmationContent}>
-                        <Text style={styles.confirmationTitle}>Reset Counter?</Text>
-                        <Text style={styles.confirmationText}>
-                            Are you sure you want to reset the counter to 0? This action cannot be undone.
-                        </Text>
-                        <View style={styles.confirmationButtons}>
-                            <TouchableOpacity
-                                style={styles.cancelConfirmButton}
-                                onPress={() => setShowResetConfirm(false)}
-                            >
-                                <Text style={styles.buttonText}>Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={styles.confirmButton}
-                                onPress={handleConfirmReset}
-                            >
-                                <Text style={styles.buttonText}>Reset</Text>
-                            </TouchableOpacity>
+            {/* Delete Confirmation Modal */}
+            {!showThemeOnly && (
+                <Modal
+                    visible={showDeleteConfirmation}
+                    transparent={true}
+                    animationType="fade"
+                    onRequestClose={cancelDeleteCounter}
+                >
+                    <View style={styles.modalContainer}>
+                        <View style={styles.confirmationModal}>
+                            <Text style={styles.confirmationTitle}>Delete Counter</Text>
+                            <Text style={styles.confirmationText}>
+                                Are you sure you want to delete this counter? This action cannot be undone.
+                            </Text>
+                            <View style={styles.confirmationButtons}>
+                                <TouchableOpacity
+                                    style={[styles.confirmationButton, styles.cancelDeleteButton]}
+                                    onPress={cancelDeleteCounter}
+                                >
+                                    <Text style={styles.confirmationButtonText}>Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.confirmationButton, styles.confirmDeleteButton]}
+                                    onPress={confirmDeleteCounter}
+                                >
+                                    <Text style={styles.confirmationButtonText}>Delete</Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     </View>
-                </View>
-            </Modal>
+                </Modal>
+            )}
         </>
     );
 } 
