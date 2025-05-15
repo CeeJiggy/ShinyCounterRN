@@ -64,7 +64,7 @@ export default function IndividualCounterTabView() {
             alignItems: 'center',
             padding: 24,
             marginBottom: 24,
-            elevation: 2,
+            // elevation: 2,
             borderRadius: 16,
         },
         pokeImage: {

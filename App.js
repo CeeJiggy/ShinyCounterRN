@@ -35,11 +35,3 @@ const styles = StyleSheet.create({
         paddingBottom: Platform.OS === 'web' ? 100 : 20,
     },
 });
-
-function DummyTabs() {
-    return (
-        <View style={{ backgroundColor: 'red', height: 50, width: '100%' }}>
-            <Text style={{ color: 'white' }}>DUMMY</Text>
-        </View>
-    );
-} 
