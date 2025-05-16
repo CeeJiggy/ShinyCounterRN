@@ -1,9 +1,13 @@
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, Image } from 'react-native';
 import { useCounter } from '../context/CounterContext';
 import { useThemeContext } from '../context/ThemeContext';
-import { StyleSheet, View, Text, TouchableOpacity, Image, Modal, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Menu from './Menu';
 import { useState } from 'react';
+import CounterDisplay from './common/CounterDisplay';
+import CounterControls from './common/CounterControls';
+import Modal from './common/Modal';
+import Button from './common/Button';
 
 export default function IndividualCounterTabView() {
     const {
@@ -17,7 +21,8 @@ export default function IndividualCounterTabView() {
         setCount,
         probabilityNumerator,
         probabilityDenominator,
-        calculateBinomialProbability
+        calculateBinomialProbability,
+        showProbability
     } = useCounter();
     const { getThemeColors } = useThemeContext();
     const themeColors = getThemeColors();
@@ -31,10 +36,12 @@ export default function IndividualCounterTabView() {
         setTempCount(count.toString());
         setModalVisible(true);
     };
+
     const handleCountChange = (text) => {
         const numericText = text.replace(/[^0-9]/g, '');
         setTempCount(numericText);
     };
+
     const handleSave = () => {
         if (tempCount === '') {
             setCount(0);
@@ -44,9 +51,6 @@ export default function IndividualCounterTabView() {
                 setCount(num);
             }
         }
-        setModalVisible(false);
-    };
-    const handleCancel = () => {
         setModalVisible(false);
     };
 
@@ -64,7 +68,6 @@ export default function IndividualCounterTabView() {
             alignItems: 'center',
             padding: 24,
             marginBottom: 24,
-            // elevation: 2,
             borderRadius: 16,
         },
         pokeImage: {
@@ -81,72 +84,6 @@ export default function IndividualCounterTabView() {
             marginBottom: 8,
             textAlign: 'center',
         },
-        counterCount: {
-            fontSize: 48,
-            fontWeight: 'bold',
-            color: themeColors.text,
-            marginVertical: 8,
-            textAlign: 'center',
-            minWidth: 200,
-            padding: 16,
-            backgroundColor: themeColors.background,
-            borderRadius: 12,
-            borderWidth: 2,
-            borderColor: themeColors.text + '20',
-        },
-        cardButton: {
-            width: 56,
-            height: 56,
-            borderRadius: 12,
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginHorizontal: 8,
-            padding: 0,
-        },
-        cardDecrement: {
-            backgroundColor: themeColors.decrementButton,
-        },
-        cardIncrement: {
-            backgroundColor: themeColors.incrementButton,
-        },
-        cardButtonText: {
-            color: '#fff',
-            fontSize: 32,
-            fontWeight: 'bold',
-            textAlign: 'center',
-            textAlignVertical: 'center',
-            includeFontPadding: false,
-            lineHeight: 52,
-            height: 56,
-            marginTop: -2,
-        },
-        controls: {
-            flexDirection: 'row',
-            justifyContent: 'center',
-            alignItems: 'center',
-            width: '100%',
-            marginTop: 8,
-        },
-        probability: {
-            fontSize: 18,
-            color: themeColors.text,
-            opacity: 0.7,
-            marginTop: 10,
-        },
-        modalContainer: {
-            flex: 1,
-            justifyContent: 'center',
-            alignItems: 'center',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        },
-        modalContent: {
-            backgroundColor: themeColors.background,
-            padding: 20,
-            borderRadius: 12,
-            minWidth: '250px',
-            width: '20%',
-            alignItems: 'center',
-        },
         modalInput: {
             fontSize: 24,
             color: themeColors.text,
@@ -158,39 +95,10 @@ export default function IndividualCounterTabView() {
             borderRadius: 8,
             marginBottom: 20,
         },
-        buttonContainer: {
-            flexDirection: 'row',
-            justifyContent: 'space-around',
-            width: '100%',
-        },
-        button: {
-            padding: 10,
-            borderRadius: 8,
-            minWidth: 100,
-            alignItems: 'center',
-        },
-        saveButton: {
-            backgroundColor: themeColors.primary,
-        },
-        cancelButton: {
-            backgroundColor: themeColors.text + '20',
-        },
-        buttonText: {
-            color: '#fff',
-            fontSize: 16,
-            fontWeight: 'bold',
-        },
-        modalTitle: {
-            color: themeColors.text,
-            fontSize: 24,
-            fontWeight: 'bold',
-            marginBottom: 20,
-        },
     });
 
     return (
         <View style={styles.outer}>
-            {/* Settings/Menu button in top right */}
             <View style={{ position: 'absolute', top: 8, right: 8, zIndex: 10 }}>
                 <Menu />
             </View>
@@ -203,67 +111,42 @@ export default function IndividualCounterTabView() {
                 <Text style={styles.counterName}>
                     {counter.customName || counter.pokemonName || `Counter ${selectedCounterIndex + 1}`}
                 </Text>
-                <TouchableOpacity
+                <CounterDisplay
+                    count={count}
+                    probability={calculateBinomialProbability(count, probabilityNumerator, probabilityDenominator)}
                     onPress={handleOpenModal}
-                    style={({ pressed }) => [
-                        {
-                            opacity: pressed ? 0.7 : 1,
-                            transform: [{ scale: pressed ? 0.98 : 1 }]
-                        }
-                    ]}
-                >
-                    <Text style={styles.counterCount}>{count}</Text>
-                </TouchableOpacity>
-                <View style={styles.controls}>
-                    <TouchableOpacity
-                        style={[styles.cardButton, styles.cardDecrement]}
-                        onPress={decrement}
-                    >
-                        <Text style={styles.cardButtonText}>-</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.cardButton, styles.cardIncrement]}
-                        onPress={increment}
-                    >
-                        <Text style={styles.cardButtonText}>+</Text>
-                    </TouchableOpacity>
-                </View>
-                <Text style={styles.probability}>
-                    Probability: {calculateBinomialProbability(count, probabilityNumerator, probabilityDenominator).toFixed(2)}%
-                </Text>
+                    showProbability={showProbability}
+                />
+                <CounterControls
+                    onIncrement={increment}
+                    onDecrement={decrement}
+                />
             </View>
+
             <Modal
-                animationType="fade"
-                transparent={true}
                 visible={modalVisible}
-                onRequestClose={handleCancel}
+                onRequestClose={() => setModalVisible(false)}
+                title="Enter a new count"
             >
-                <View style={styles.modalContainer}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Enter a new count</Text>
-                        <TextInput
-                            style={styles.modalInput}
-                            value={tempCount}
-                            onChangeText={handleCountChange}
-                            keyboardType="numeric"
-                            selectTextOnFocus={true}
-                            maxLength={6}
-                        />
-                        <View style={styles.buttonContainer}>
-                            <TouchableOpacity
-                                style={[styles.button, styles.cancelButton]}
-                                onPress={handleCancel}
-                            >
-                                <Text style={styles.buttonText}>Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.button, styles.saveButton]}
-                                onPress={handleSave}
-                            >
-                                <Text style={styles.buttonText}>Save</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
+                <TextInput
+                    style={styles.modalInput}
+                    value={tempCount}
+                    onChangeText={handleCountChange}
+                    keyboardType="numeric"
+                    selectTextOnFocus={true}
+                    maxLength={6}
+                />
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <Button
+                        title="Cancel"
+                        variant="cancel"
+                        onPress={() => setModalVisible(false)}
+                    />
+                    <Button
+                        title="Save"
+                        variant="primary"
+                        onPress={handleSave}
+                    />
                 </View>
             </Modal>
         </View>

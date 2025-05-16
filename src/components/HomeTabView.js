@@ -1,9 +1,13 @@
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Modal, FlatList, Image } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, FlatList, Image, TouchableOpacity, TextInput } from 'react-native';
 import { useState } from 'react';
 import { useCounter } from '../context/CounterContext';
 import { useThemeContext } from '../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import Menu from './Menu';
+import CounterItem from './common/CounterItem';
+import Modal from './common/Modal';
+import Button from './common/Button';
+import CounterControls from './common/CounterControls';
 
 export default function HomeTabView() {
     const {
@@ -14,11 +18,15 @@ export default function HomeTabView() {
         getHomeCounters,
         incrementHomeCounters,
         decrementHomeCounters,
-        setCount
+        setCount,
+        homeCounterDisplayMode,
+        showHomeProbability,
+        calculateBinomialProbability
     } = useCounter();
     const { getThemeColors } = useThemeContext();
     const themeColors = getThemeColors();
     const [modalVisible, setModalVisible] = useState(false);
+    const [editCountModal, setEditCountModal] = useState({ visible: false, counterId: null, tempCount: '' });
 
     // Helper to increment/decrement a specific counter
     const handleIncrement = (counter) => {
@@ -28,141 +36,49 @@ export default function HomeTabView() {
         setCount((counter.count - counter.interval) < 0 ? 0 : counter.count - counter.interval, counter.id);
     };
 
+    const handleOpenEditCountModal = (counter) => {
+        setEditCountModal({ visible: true, counterId: counter.id, tempCount: counter.count.toString() });
+    };
+
+    const handleEditCountChange = (text) => {
+        // Remove any non-numeric characters
+        const numericText = text.replace(/[^0-9]/g, '');
+        setEditCountModal((prev) => ({ ...prev, tempCount: numericText }));
+    };
+
+    const handleEditCountSave = () => {
+        const { counterId, tempCount } = editCountModal;
+        const num = parseInt(tempCount);
+        if (!isNaN(num)) {
+            setCount(num, counterId);
+        }
+        setEditCountModal({ visible: false, counterId: null, tempCount: '' });
+    };
+
+    const handleEditCountCancel = () => {
+        setEditCountModal({ visible: false, counterId: null, tempCount: '' });
+    };
+
     const styles = StyleSheet.create({
         outer: {
             flex: 1,
             alignItems: 'center',
-            justifyContent: 'center',
             width: '100%',
+            justifyContent: 'center',
+
         },
         counterCard: {
             width: '100%',
-            maxWidth: 400,
+            // maxWidth: 400,
             alignItems: 'center',
-            padding: 24,
-            marginBottom: 24,
+            justifyContent: 'center',
+            paddingHorizontal: 24,
+            paddingTop: 24,
+            flex: 1,
         },
         counterList: {
             width: '100%',
-            marginBottom: 10,
-            height: '80%',
-        },
-        counterItem: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            position: 'relative',
-            // minHeight: 96,
-            padding: 12,
-            backgroundColor: themeColors.background,
-            borderTopWidth: 1,
-            borderBottomWidth: 1,
-            marginBottom: 14,
-            borderColor: themeColors.text + '20',
-            shadowColor: '#000',
-            shadowOpacity: 0.04,
-            shadowRadius: 4,
-            width: '100%',
-            alignSelf: 'center',
-        },
-        counterImageCol: {
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 72,
-            height: '100%',
-        },
-        pokeImage: {
-            width: 100,
-            height: 100,
-            marginBottom: 0,
-            resizeMode: 'contain',
-            alignSelf: 'center',
-        },
-        xButton: {
-            position: 'absolute',
-            top: 12,
-            right: 12,
-            zIndex: 2,
-        },
-        counterContentCol: {
             flex: 1,
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            width: '100%',
-            marginLeft: -32,
-        },
-        counterRow: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            width: '100%',
-            marginBottom: 2,
-            justifyContent: 'center',
-        },
-        counterNameCol: {
-            flex: 1,
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '100%',
-        },
-        counterActions: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginTop: 8,
-            width: '100%',
-        },
-        counterName: {
-            fontSize: 16,
-            color: themeColors.text,
-            fontWeight: 'bold',
-            flex: 1,
-        },
-        counterCount: {
-            fontSize: 20,
-            fontWeight: 'bold',
-            color: themeColors.text,
-            marginHorizontal: 10,
-        },
-        removeButton: {
-            padding: 4,
-        },
-        controls: {
-            flexDirection: 'row',
-            justifyContent: 'center',
-            gap: 10,
-            marginTop: 10,
-            marginBottom: 10,
-        },
-        controlButton: {
-            flex: 1,
-            padding: 15,
-            borderRadius: 8,
-            alignItems: 'center',
-            minWidth: 100,
-            maxWidth: 120,
-        },
-        decrementButton: {
-            backgroundColor: themeColors.decrementButton,
-        },
-        incrementButton: {
-            backgroundColor: themeColors.incrementButton,
-        },
-        addButton: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            padding: 12,
-            backgroundColor: themeColors.primary,
-            borderRadius: 8,
-            marginBottom: 0,
-            minWidth: 160,
-            alignSelf: 'center',
-            justifyContent: 'center',
-        },
-        addButtonText: {
-            color: '#fff',
-            fontSize: 16,
-            fontWeight: 'bold',
-            marginLeft: 10,
         },
         noCountersMsg: {
             fontSize: 16,
@@ -170,200 +86,234 @@ export default function HomeTabView() {
             textAlign: 'center',
             marginTop: 20,
         },
-        modalOverlay: {
-            flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.3)',
-            justifyContent: 'center',
-            alignItems: 'center',
-        },
-        modalContent: {
-            backgroundColor: themeColors.background,
-            borderRadius: 12,
-            padding: 20,
-            minWidth: 260,
-            maxWidth: 340,
-            alignItems: 'center',
-        },
-        modalTitle: {
-            fontSize: 18,
-            fontWeight: 'bold',
-            color: themeColors.text,
-            marginBottom: 16,
-        },
-        modalItem: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            paddingVertical: 8,
-            paddingHorizontal: 4,
+        addButton: {
+            marginTop: 16,
+            marginBottom: 24,
             width: '100%',
         },
-        modalItemText: {
-            fontSize: 16,
-            color: themeColors.text,
-            marginLeft: 10,
-        },
-        modalClose: {
-            marginTop: 16,
-            padding: 8,
-            backgroundColor: themeColors.primary,
-            borderRadius: 8,
-        },
-        modalCloseText: {
-            color: '#fff',
-            fontWeight: 'bold',
-            fontSize: 16,
-        },
-        cardButton: {
-            width: 28,
-            height: 28,
-            borderRadius: 4,
+        controls: {
+            marginBottom: 16,
+            width: '100%',
             alignItems: 'center',
-            justifyContent: 'center',
-            marginHorizontal: 2,
         },
-        cardDecrement: {
-            backgroundColor: themeColors.decrementButton,
+        addCounterItem: {
+            marginBottom: 10,
+            marginTop: 10,
+            width: '100%',
         },
-        cardIncrement: {
-            backgroundColor: themeColors.incrementButton,
-        },
-        cardButtonText: {
-            color: '#fff',
-            fontSize: 18,
-            fontWeight: 'bold',
-        },
-        buttonText: {
-            color: '#fff',
-            fontSize: 18,
-            fontWeight: 'bold',
+        bottomContainer: {
+            width: '100%',
+            paddingHorizontal: 24,
+            paddingBottom: 16,
+            paddingTop: 16,
+            borderTopWidth: 3,
+            borderTopColor: themeColors.text + '20',
         },
     });
+
+    // Style for count display to match IndividualCounterTabView, but smaller for HomeTabView
+    const countDisplayStyle = {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: themeColors.text,
+        textAlign: 'center',
+        minWidth: 120,
+        maxWidth: 120,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderWidth: 2,
+        borderColor: themeColors.text + '20',
+        borderRadius: 12,
+        backgroundColor: themeColors.text + '05',
+    };
 
     const availableCounters = counters.filter(counter => !homeCounters.includes(counter.id));
     const selectedCounters = getHomeCounters();
 
     return (
         <View style={styles.outer}>
-            {/* Settings/Menu button in top right */}
-            <View style={{ position: 'absolute', top: 8, right: 8, zIndex: 10 }}>
-                <Menu showThemeOnly={true} />
-            </View>
             <View style={styles.counterCard}>
-                <ScrollView style={styles.counterList} contentContainerStyle={{ alignItems: 'center' }}>
-                    {selectedCounters.map(counter => (
-                        <View key={counter.id} style={styles.counterItem}>
-                            {/* X button absolutely positioned top right */}
-                            <TouchableOpacity
-                                onPress={() => removeCounterFromHome(counter.id)}
-                                style={styles.xButton}
+                {counters.length === 0 ? (
+                    <View style={{ alignItems: 'center', marginTop: 32 }}>
+                        <Text style={styles.noCountersMsg}>
+                            No counters exist yet. Use the + button below to create your first counter!
+                        </Text>
+                    </View>
+                ) : (
+                    <>
+                        {selectedCounters.length > 0 && (
+                            <ScrollView
+                                style={[
+                                    styles.counterList,
+                                    {
+                                        scrollbarColor: `${themeColors.primary} ${themeColors.background}`,
+                                        scrollbarWidth: 'thin',
+                                        paddingHorizontal: 10,
+                                    }
+                                ]}
+                                contentContainerStyle={{
+                                    flexDirection: 'row',
+                                    flexWrap: 'wrap',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    gap: 16,
+                                    paddingBottom: 16
+
+                                }}
+                                showsVerticalScrollIndicator={true}
+                                contentInsetAdjustmentBehavior="automatic"
+                                persistentScrollbar={true}
                             >
-                                <Ionicons name="close-circle" size={24} color={themeColors.text} />
-                            </TouchableOpacity>
-                            {/* Left column: image */}
-                            <View style={styles.counterImageCol}>
-                                {counter.pokemonImage ? (
-                                    <Image source={{ uri: counter.pokemonImage }} style={styles.pokeImage} />
-                                ) : (
-                                    <Ionicons name="ellipsis-horizontal-circle" size={40} color={themeColors.text} style={{ marginRight: 14 }} />
+                                {selectedCounters.map(counter => (
+                                    <CounterItem
+                                        key={counter.id}
+                                        counter={counter}
+                                        onPress={() => handleOpenEditCountModal(counter)}
+                                        onIncrement={handleIncrement}
+                                        onDecrement={handleDecrement}
+                                        onRemove={removeCounterFromHome}
+                                        showRemoveButton={true}
+                                        showControls={homeCounterDisplayMode === 'full'}
+                                        showImage={homeCounterDisplayMode !== 'minimal'}
+                                        showProbability={showHomeProbability}
+                                        probability={calculateBinomialProbability(counter.count, counter.probabilityNumerator, counter.probabilityDenominator)}
+                                        style={{
+                                            width: 220,
+                                            margin: 8,
+                                        }}
+                                        countStyle={countDisplayStyle}
+                                    />
+                                ))}
+                            </ScrollView>
+                        )}
+                        {selectedCounters.length === 0 && (
+                            <View style={{ alignItems: 'center', marginTop: 32 }}>
+                                <Text style={styles.noCountersMsg}>
+                                    Add counters from your other tabs to see them here!
+                                </Text>
+                                {availableCounters.length > 0 && (
+                                    <Button
+                                        title="Add Counter"
+                                        variant="primary"
+                                        icon={<Ionicons name="add" size={24} color="#fff" />}
+                                        style={{ marginTop: 16, minWidth: 180 }}
+                                        onPress={() => setModalVisible(true)}
+                                    />
                                 )}
                             </View>
-                            {/* Right column: name, count, controls (all centered) */}
-                            <View style={styles.counterContentCol}>
-                                <View style={{ width: '100%', alignItems: 'center', marginTop: 2 }}>
-                                    <Text style={styles.counterName}>
-                                        {counter.customName || counter.pokemonName || `Counter ${counter.id}`}
-                                    </Text>
-                                </View>
-                                <View style={{ width: '100%', alignItems: 'center', marginTop: 4 }}>
-                                    <Text style={styles.counterCount}>{counter.count}</Text>
-                                </View>
-                                <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', width: '100%', marginTop: 4 }}>
-                                    <TouchableOpacity
-                                        style={[styles.cardButton, styles.cardDecrement]}
-                                        onPress={() => handleDecrement(counter)}
-                                    >
-                                        <Text style={styles.cardButtonText}>-</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        style={[styles.cardButton, styles.cardIncrement, { marginLeft: 8 }]}
-                                        onPress={() => handleIncrement(counter)}
-                                    >
-                                        <Text style={styles.cardButtonText}>+</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-                        </View>
-                    ))}
-                </ScrollView>
-                {selectedCounters.length === 0 && (
-                    <Text style={styles.noCountersMsg}>
-                        Add counters from your other tabs to see them here!
-                    </Text>
+                        )}
+                    </>
                 )}
             </View>
-            {/* Add Counter button outside the card, with margin to match menu/settings button spacing */}
-            {availableCounters.length > 0 && (
-                <TouchableOpacity
-                    style={[styles.addButton, { marginTop: 16, marginBottom: 24 }]}
-                    onPress={() => setModalVisible(true)}
-                >
-                    <Ionicons name="add" size={24} color="#fff" />
-                    <Text style={styles.addButtonText}>Add Counter</Text>
-                </TouchableOpacity>
-            )}
-            {/* Controls at the bottom, with margin to match individual tab */}
-            {selectedCounters.length > 0 && (
-                <View style={[styles.controls, { marginBottom: 16 }]}>
-                    <TouchableOpacity
-                        style={[styles.controlButton, styles.decrementButton]}
-                        onPress={decrementHomeCounters}
-                    >
-                        <Text style={styles.buttonText}>-</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.controlButton, styles.incrementButton]}
-                        onPress={incrementHomeCounters}
-                    >
-                        <Text style={styles.buttonText}>+</Text>
-                    </TouchableOpacity>
+
+            {counters.length > 0 && selectedCounters.length > 0 && (
+                <View style={styles.bottomContainer}>
+                    {selectedCounters.length > 0 && (
+                        <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16, width: '100%' }}>
+                            <Button
+                                title="-"
+                                variant="decrement"
+                                onPress={decrementHomeCounters}
+                                style={{ flex: 1, minWidth: 60, maxWidth: 120 }}
+                            />
+                            {availableCounters.length > 0 && (
+                                <Button
+                                    title="Add Counter"
+                                    variant="primary"
+                                    icon={<Ionicons name="add" size={24} color="#fff" />}
+                                    style={{ flex: 2, minWidth: 155, maxWidth: 155, height: 45 }}
+                                    onPress={() => setModalVisible(true)}
+                                />
+                            )}
+                            <Button
+                                title="+"
+                                variant="increment"
+                                onPress={incrementHomeCounters}
+                                style={{ flex: 1, minWidth: 60, maxWidth: 120 }}
+                            />
+                        </View>
+                    )}
                 </View>
             )}
+
             <Modal
                 visible={modalVisible}
-                transparent
-                animationType="fade"
                 onRequestClose={() => setModalVisible(false)}
+                title="Select a counter to add"
+                footer={
+                    <Button
+                        title="Close"
+                        variant="primary"
+                        onPress={() => setModalVisible(false)}
+                    />
+                }
             >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Select a counter to add</Text>
-                        <FlatList
-                            data={availableCounters}
-                            keyExtractor={item => item.id.toString()}
-                            renderItem={({ item }) => (
-                                <TouchableOpacity
-                                    style={styles.modalItem}
-                                    onPress={() => {
-                                        addCounterToHome(item.id);
-                                        setModalVisible(false);
-                                    }}
-                                >
-                                    {item.pokemonImage ? (
-                                        <Image source={{ uri: item.pokemonImage }} style={styles.pokeImage} />
-                                    ) : (
-                                        <Ionicons name="ellipsis-horizontal-circle" size={32} color={themeColors.text} />
-                                    )}
-                                    <Text style={styles.modalItemText}>
-                                        {item.customName || item.pokemonName || `Counter ${item.id}`}
-                                    </Text>
-                                </TouchableOpacity>
-                            )}
-                            ListEmptyComponent={<Text style={{ color: themeColors.text, marginVertical: 10 }}>No counters available</Text>}
-                        />
-                        <TouchableOpacity style={styles.modalClose} onPress={() => setModalVisible(false)}>
-                            <Text style={styles.modalCloseText}>Close</Text>
-                        </TouchableOpacity>
-                    </View>
+                <FlatList
+                    style={{ width: '100%', }}
+                    data={availableCounters}
+                    keyExtractor={item => item.id.toString()}
+                    renderItem={({ item }) => {
+                        const fallbackName = item.customName || item.pokemonName || `Counter ${counters.findIndex(c => c.id === item.id) + 1}`;
+                        return (
+                            <TouchableOpacity
+                                onPress={() => {
+                                    addCounterToHome(item.id);
+                                    setModalVisible(false);
+                                }}
+                                style={styles.addCounterItem}
+                            >
+                                <CounterItem
+                                    counter={{ ...item, customName: fallbackName }}
+                                    showControls={false}
+                                />
+                            </TouchableOpacity>
+                        );
+                    }}
+                    ListEmptyComponent={
+                        <Text style={{ color: themeColors.text, marginVertical: 10 }}>
+                            No counters available
+                        </Text>
+                    }
+                    showsVerticalScrollIndicator={true}
+                />
+            </Modal>
+
+            {/* Edit Count Modal */}
+            <Modal
+                visible={editCountModal.visible}
+                onRequestClose={handleEditCountCancel}
+                title="Edit Count"
+            >
+                <Text style={{ fontSize: 18, color: themeColors.text, marginBottom: 16, textAlign: 'center' }}>Enter a new count</Text>
+                <TextInput
+                    style={{
+                        fontSize: 24,
+                        color: themeColors.text,
+                        textAlign: 'center',
+                        width: '100%',
+                        padding: 10,
+                        borderWidth: 2,
+                        borderColor: themeColors.text + '20',
+                        borderRadius: 8,
+                        marginBottom: 20,
+                    }}
+                    value={editCountModal.tempCount}
+                    onChangeText={handleEditCountChange}
+                    keyboardType="numeric"
+                    selectTextOnFocus={true}
+                    maxLength={6}
+                />
+                <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center' }}>
+                    <Button
+                        title="Cancel"
+                        variant="cancel"
+                        onPress={handleEditCountCancel}
+                    />
+                    <Button
+                        title="Save"
+                        variant="primary"
+                        onPress={handleEditCountSave}
+                    />
                 </View>
             </Modal>
         </View>

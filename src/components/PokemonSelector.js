@@ -151,6 +151,7 @@ export default function PokemonSelector() {
             color: themeColors.text,
             fontSize: 16,
             marginBottom: 5,
+            textAlign: 'center',
         },
         oddsContainer: {
             flexDirection: 'row',
@@ -162,6 +163,7 @@ export default function PokemonSelector() {
             backgroundColor: themeColors.text + '10',
             padding: 10,
             borderRadius: 8,
+            width: 50,
             color: themeColors.text,
         },
         oddsSeparator: {
@@ -205,7 +207,7 @@ export default function PokemonSelector() {
         selectedPokemonImage: {
             width: 100,
             height: 100,
-            marginBottom: 10,
+            // marginBottom: 10,
         },
         selectedPokemonName: {
             fontSize: 18,
@@ -513,7 +515,7 @@ export default function PokemonSelector() {
             >
                 <Ionicons name="arrow-back" size={24} color={themeColors.text} />
             </TouchableOpacity>
-
+            <Text style={styles.setupTitle}>Configure Counter</Text>
             <View style={styles.selectedPokemonPreview}>
                 {selectedPokemon?.image && (
                     <Image
@@ -521,12 +523,9 @@ export default function PokemonSelector() {
                         style={styles.selectedPokemonImage}
                     />
                 )}
-                <Text style={styles.selectedPokemonName}>
-                    {selectedPokemon?.name?.replace(/-female$/, '').replace(/-/g, ' ')}
-                </Text>
             </View>
 
-            <Text style={styles.setupTitle}>Configure Counter</Text>
+
 
             <Text style={styles.setupLabel}>Counter Name</Text>
             <TextInput

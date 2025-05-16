@@ -8,6 +8,7 @@ import { ThemeProvider, useThemeContext } from '../src/context/ThemeContext';
 import CounterTabs from '../src/components/CounterTabs';
 import HomeTabView from '../src/components/HomeTabView';
 import IndividualCounterTabView from '../src/components/IndividualCounterTabView';
+import SettingsTabView from '../src/components/SettingsTabView';
 // Set initial background color in index.html instead
 
 function capitalizeName(name: string): string {
@@ -47,7 +48,9 @@ function CounterApp() {
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
-            {selectedCounterIndex === -1 ? (
+            {selectedCounterIndex === -2 ? (
+                <SettingsTabView />
+            ) : selectedCounterIndex === -1 ? (
                 <HomeTabView />
             ) : (
                 <IndividualCounterTabView />

@@ -7,7 +7,10 @@ const MAX_VALUE = 999999;
 const STORAGE_KEYS = {
     COUNTERS: 'shinyCounter_counters',
     SELECTED_COUNTER: 'shinyCounter_selectedCounter',
-    HOME_COUNTERS: 'shinyCounter_homeCounters'
+    HOME_COUNTERS: 'shinyCounter_homeCounters',
+    SHOW_PROBABILITY: 'shinyCounter_showProbability',
+    HOME_COUNTER_DISPLAY_MODE: 'shinyCounter_homeCounterDisplayMode',
+    SHOW_HOME_PROBABILITY: 'shinyCounter_showHomeProbability',
 };
 
 export const CounterProvider = ({ children }) => {
@@ -17,6 +20,10 @@ export const CounterProvider = ({ children }) => {
     const [isInitialized, setIsInitialized] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [showPokemonSelector, setShowPokemonSelector] = useState(false);
+    const [showProbability, setShowProbability] = useState(true);
+    const [showHomeCounterControls, setShowHomeCounterControls] = useState(true);
+    const [homeCounterDisplayMode, setHomeCounterDisplayMode] = useState('full');
+    const [showHomeProbability, setShowHomeProbability] = useState(true);
 
     // Load saved values on mount
     useEffect(() => {
@@ -25,6 +32,10 @@ export const CounterProvider = ({ children }) => {
                 const savedCounters = await AsyncStorage.getItem(STORAGE_KEYS.COUNTERS);
                 const savedSelectedCounter = await AsyncStorage.getItem(STORAGE_KEYS.SELECTED_COUNTER);
                 const savedHomeCounters = await AsyncStorage.getItem(STORAGE_KEYS.HOME_COUNTERS);
+                const savedShowProbability = await AsyncStorage.getItem(STORAGE_KEYS.SHOW_PROBABILITY);
+                const savedShowHomeCounterControls = await AsyncStorage.getItem(STORAGE_KEYS.SHOW_HOME_COUNTER_CONTROLS);
+                const savedHomeCounterDisplayMode = await AsyncStorage.getItem(STORAGE_KEYS.HOME_COUNTER_DISPLAY_MODE);
+                const savedShowHomeProbability = await AsyncStorage.getItem(STORAGE_KEYS.SHOW_HOME_PROBABILITY);
 
                 if (savedCounters) {
                     setCounters(JSON.parse(savedCounters));
@@ -39,6 +50,22 @@ export const CounterProvider = ({ children }) => {
 
                 if (savedHomeCounters) {
                     setHomeCounters(JSON.parse(savedHomeCounters));
+                }
+
+                if (savedShowProbability !== null) {
+                    setShowProbability(savedShowProbability === 'true');
+                }
+
+                if (savedShowHomeCounterControls !== null) {
+                    setShowHomeCounterControls(savedShowHomeCounterControls === 'true');
+                }
+
+                if (savedHomeCounterDisplayMode !== null) {
+                    setHomeCounterDisplayMode(savedHomeCounterDisplayMode);
+                }
+
+                if (savedShowHomeProbability !== null) {
+                    setShowHomeProbability(savedShowHomeProbability === 'true');
                 }
 
                 setIsInitialized(true);
@@ -62,13 +89,17 @@ export const CounterProvider = ({ children }) => {
                 await AsyncStorage.setItem(STORAGE_KEYS.COUNTERS, JSON.stringify(counters));
                 await AsyncStorage.setItem(STORAGE_KEYS.SELECTED_COUNTER, selectedCounterIndex.toString());
                 await AsyncStorage.setItem(STORAGE_KEYS.HOME_COUNTERS, JSON.stringify(homeCounters));
+                await AsyncStorage.setItem(STORAGE_KEYS.SHOW_PROBABILITY, showProbability.toString());
+                await AsyncStorage.setItem(STORAGE_KEYS.SHOW_HOME_COUNTER_CONTROLS, showHomeCounterControls.toString());
+                await AsyncStorage.setItem(STORAGE_KEYS.HOME_COUNTER_DISPLAY_MODE, homeCounterDisplayMode);
+                await AsyncStorage.setItem(STORAGE_KEYS.SHOW_HOME_PROBABILITY, showHomeProbability.toString());
             } catch (error) {
                 console.error('Error saving values:', error);
             }
         };
 
         saveValues();
-    }, [counters, selectedCounterIndex, homeCounters, isInitialized]);
+    }, [counters, selectedCounterIndex, homeCounters, showProbability, showHomeCounterControls, homeCounterDisplayMode, showHomeProbability, isInitialized]);
 
     const calculateBinomialProbability = (trials, numerator, denominator) => {
         const p = numerator / denominator;
@@ -269,7 +300,15 @@ export const CounterProvider = ({ children }) => {
             removeCounterFromHome,
             getHomeCounters,
             incrementHomeCounters,
-            decrementHomeCounters
+            decrementHomeCounters,
+            showProbability,
+            setShowProbability,
+            showHomeCounterControls,
+            setShowHomeCounterControls,
+            homeCounterDisplayMode,
+            setHomeCounterDisplayMode,
+            showHomeProbability,
+            setShowHomeProbability
         }}>
             {children}
         </CounterContext.Provider>

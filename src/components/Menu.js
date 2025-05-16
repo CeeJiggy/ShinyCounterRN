@@ -543,43 +543,6 @@ export default function Menu({ showThemeOnly = false }) {
                                     )}
                                 </View>
                             )}
-                            <View style={styles.section}>
-                                <Text style={styles.sectionTitle}>Theme</Text>
-                                <View style={styles.row}>
-                                    <Text style={styles.label}>Use System Theme</Text>
-                                    <Switch
-                                        value={isSystemTheme}
-                                        onValueChange={setIsSystemTheme}
-                                        trackColor={{ false: '#989799', true: menuColors.text + '40' }}
-                                        thumbColor={isSystemTheme ? 'rgba(33,150,243,1.00)' : '#4a4a4a'}
-                                        activeThumbColor={isSystemTheme ? 'rgba(33,150,243,1.00)' : '#4a4a4a'}
-                                    />
-                                </View>
-
-                                {!isSystemTheme && (
-                                    <View style={styles.radioContainer}>
-                                        <View style={styles.radioOption}>
-                                            <TouchableOpacity
-                                                style={styles.radioButton}
-                                                onPress={() => handleThemeChange('light')}
-                                            >
-                                                {selectedTheme === 'light' && <View style={styles.radioButtonSelected} />}
-                                            </TouchableOpacity>
-                                            <Text style={styles.radioLabel}>Light</Text>
-                                        </View>
-
-                                        <View style={styles.radioOption}>
-                                            <TouchableOpacity
-                                                style={styles.radioButton}
-                                                onPress={() => handleThemeChange('dark')}
-                                            >
-                                                {selectedTheme === 'dark' && <View style={styles.radioButtonSelected} />}
-                                            </TouchableOpacity>
-                                            <Text style={styles.radioLabel}>Dark</Text>
-                                        </View>
-                                    </View>
-                                )}
-                            </View>
                         </ScrollView>
 
                         <View style={styles.buttonContainer}>
