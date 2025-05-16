@@ -298,10 +298,8 @@ export default function PokemonSelector() {
                         name: pokemonName,
                         image: pokemon.imageOverride
                     });
-                    // Pre-fill counter name
                     setTempCounterName(formattedNewName);
                 } else {
-                    // For existing counter, update Pokemon and possibly the name
                     setPokemon(pokemonName, pokemon.imageOverride);
                     const currentCounter = counters[selectedCounterIndex];
                     const currentPokemonName = formatPokemonName(currentCounter.pokemonName || '');
@@ -320,49 +318,16 @@ export default function PokemonSelector() {
             const response = await fetch(urlToFetch);
             details = await response.json();
             const imageUrl = getHomeShinyImageUrl(details, pokemon, isFemale, false);
-            let imageToUse = imageUrl;
 
-            try {
-                const imageResponse = await fetch(imageUrl);
-                const imageBlob = await imageResponse.blob();
-                const reader = new FileReader();
-                reader.readAsDataURL(imageBlob);
-                reader.onloadend = () => {
-                    const base64data = reader.result;
-                    if (isNewCounter) {
-                        setSelectedPokemon({
-                            name: pokemonName,
-                            image: base64data
-                        });
-                        // Pre-fill counter name
-                        setTempCounterName(formattedNewName);
-                    } else {
-                        // For existing counter, update Pokemon and possibly the name
-                        setPokemon(pokemonName, base64data);
-                        const currentCounter = counters[selectedCounterIndex];
-                        const currentPokemonName = formatPokemonName(currentCounter.pokemonName || '');
-                        if (currentCounter.customName === currentPokemonName) {
-                            setCounterName(selectedCounterIndex, formattedNewName);
-                        }
-                        setShowPokemonSelector(false);
-                    }
-                    setLoading(false);
-                };
-                return;
-            } catch (error) {
-                imageToUse = imageUrl;
-            }
-
+            // Store the direct image URL in the counter
             if (isNewCounter) {
                 setSelectedPokemon({
                     name: pokemonName,
-                    image: imageToUse
+                    image: imageUrl
                 });
-                // Pre-fill counter name
                 setTempCounterName(formattedNewName);
             } else {
-                // For existing counter, update Pokemon and possibly the name
-                setPokemon(pokemonName, imageToUse);
+                setPokemon(pokemonName, imageUrl);
                 const currentCounter = counters[selectedCounterIndex];
                 const currentPokemonName = formatPokemonName(currentCounter.pokemonName || '');
                 if (currentCounter.customName === currentPokemonName) {
@@ -370,6 +335,8 @@ export default function PokemonSelector() {
                 }
                 setShowPokemonSelector(false);
             }
+            setLoading(false);
+            return;
         } catch (error) {
             console.error('Error fetching Pokemon details:', error);
             setLoading(false);
@@ -525,8 +492,6 @@ export default function PokemonSelector() {
                 )}
             </View>
 
-
-
             <Text style={styles.setupLabel}>Counter Name</Text>
             <TextInput
                 style={styles.setupInput}
@@ -635,7 +600,7 @@ export default function PokemonSelector() {
     );
 }
 
-function getHomeShinyImageUrl(details, pokemon, isFemale = false, forceMalePath = false) {
+export function getHomeShinyImageUrl(details, pokemon, isFemale = false, forceMalePath = false) {
     const id = details.id;
     // If this is a female override case, don't append /female to the URL
     if (isFemale && pokemon.femaleOverride) {

@@ -9,6 +9,8 @@ import CounterTabs from '../src/components/CounterTabs';
 import HomeTabView from '../src/components/HomeTabView';
 import IndividualCounterTabView from '../src/components/IndividualCounterTabView';
 import SettingsTabView from '../src/components/SettingsTabView';
+import { ObsProvider, useObs } from '../src/context/ObsContext';
+import useObsSync from '../src/utils/useObsSync';
 // Set initial background color in index.html instead
 
 function capitalizeName(name: string): string {
@@ -31,6 +33,13 @@ function PokemonDisplay() {
             </Text>
         </View>
     );
+}
+
+function AppObsSyncer() {
+    const { obsRef, obsConnected, obsSourceMappings } = useObs();
+    const { counters, calculateBinomialProbability } = useCounter();
+    useObsSync({ obsRef, obsConnected, obsSourceMappings, counters, calculateBinomialProbability });
+    return null;
 }
 
 function CounterApp() {
@@ -64,7 +73,10 @@ export default function App() {
     return (
         <ThemeProvider>
             <CounterProvider>
-                <CounterApp />
+                <ObsProvider>
+                    <AppObsSyncer />
+                    <CounterApp />
+                </ObsProvider>
             </CounterProvider>
         </ThemeProvider>
     );
