@@ -21,7 +21,7 @@
       "bundler": "metro",
       "output": "static",
       "favicon": "./assets/images/favicon.png",
-      "baseUrl": "/ShinyCounterRN"
+      "basePath": "ShinyCounterRN"
     },
     "plugins": [
       "expo-router",
