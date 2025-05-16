@@ -15,7 +15,7 @@ const STORAGE_KEYS = {
 
 export const CounterProvider = ({ children }) => {
     const [counters, setCounters] = useState([]);
-    const [selectedCounterIndex, setSelectedCounterIndex] = useState(0);
+    const [selectedCounterIndex, setSelectedCounterIndex] = useState(-1);
     const [homeCounters, setHomeCounters] = useState([]); // Array of counter IDs to show in home tab
     const [isInitialized, setIsInitialized] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -168,10 +168,16 @@ export const CounterProvider = ({ children }) => {
     };
 
     const removeCounter = (index) => {
-        setCounters(prev => prev.filter((_, i) => i !== index));
-        if (selectedCounterIndex >= index) {
-            setSelectedCounterIndex(Math.max(0, selectedCounterIndex - 1));
-        }
+        setCounters(prev => {
+            const newCounters = prev.filter((_, i) => i !== index);
+            // If this was the last counter, switch to home tab
+            if (newCounters.length === 0) {
+                setSelectedCounterIndex(-1);
+            } else if (selectedCounterIndex >= index) {
+                setSelectedCounterIndex(Math.max(0, selectedCounterIndex - 1));
+            }
+            return newCounters;
+        });
     };
 
     const increment = () => {
